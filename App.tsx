@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { UserRole, Customer, Service } from './types';
+import { UserRole, Customer } from './types';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Home from './components/Home';
@@ -8,49 +8,50 @@ import CustomerDashboard from './components/CustomerDashboard';
 import ManagerDashboard from './components/ManagerDashboard';
 import ManagerLogin from './components/ManagerLogin';
 
+/**
+ * Root Application component managing the global state for roles and data.
+ */
 const App: React.FC = () => {
   const [role, setRole] = useState<UserRole>(UserRole.GUEST);
-  const [currentCustomer, setCurrentCustomer] = useState<Customer | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [currentCustomer, setCurrentCustomer] = useState<Customer | null>(null);
+  const [isManagerLoginOpen, setIsManagerLoginOpen] = useState(false);
 
-  // Load data from LocalStorage on mount
+  // Load data from localStorage on component mount
   useEffect(() => {
-    const saved = localStorage.getItem('guedes_customers');
+    const saved = localStorage.getItem('guedes_fidelidade_data');
     if (saved) {
       try {
         setCustomers(JSON.parse(saved));
       } catch (e) {
-        console.error("Erro ao carregar dados salvos:", e);
-        setCustomers([]);
+        console.error("Error parsing saved data:", e);
       }
-    } else {
-      // In production, we start with an empty database
-      setCustomers([]);
     }
   }, []);
 
-  const saveCustomers = (updated: Customer[]) => {
-    setCustomers(updated);
-    localStorage.setItem('guedes_customers', JSON.stringify(updated));
-  };
+  // Save data to localStorage whenever the customers list is updated
+  useEffect(() => {
+    localStorage.setItem('guedes_fidelidade_data', JSON.stringify(customers));
+  }, [customers]);
 
-  const handleCustomerLogin = (idOrPlate: string) => {
+  const handleCustomerLogin = (input: string) => {
+    const normalizedInput = input.trim().toUpperCase();
     const found = customers.find(c => 
-      c.plate.toUpperCase() === idOrPlate.toUpperCase() || 
-      c.whatsapp.replace(/\D/g,'') === idOrPlate.replace(/\D/g,'')
+      c.plate.toUpperCase() === normalizedInput || 
+      c.whatsapp.replace(/\D/g,'') === input.replace(/\D/g,'')
     );
+    
     if (found) {
       setCurrentCustomer(found);
       setRole(UserRole.CUSTOMER);
     } else {
-      alert("Cliente não encontrado. Verifique os dados ou contate o administrador.");
+      alert("Cliente não encontrado. Por favor, verifique os dados informados.");
     }
   };
 
-  const handleManagerAccess = () => {
+  const handleManagerLoginSuccess = () => {
     setRole(UserRole.MANAGER);
-    setIsLoginModalOpen(false);
+    setIsManagerLoginOpen(false);
   };
 
   const handleLogout = () => {
@@ -58,13 +59,18 @@ const App: React.FC = () => {
     setCurrentCustomer(null);
   };
 
+  const handleHomeClick = () => {
+    setRole(UserRole.GUEST);
+    setCurrentCustomer(null);
+  };
+
   return (
-    <div className="min-h-screen flex flex-col bg-black text-white">
+    <div className="min-h-screen bg-black text-white flex flex-col font-sans selection:bg-[#fecb0a] selection:text-black">
       <Header 
         role={role} 
-        onManagerClick={() => setIsLoginModalOpen(true)} 
+        onManagerClick={() => setIsManagerLoginOpen(true)} 
         onLogout={handleLogout}
-        onHomeClick={() => setRole(UserRole.GUEST)}
+        onHomeClick={handleHomeClick}
       />
 
       <main className="flex-grow container mx-auto px-4 py-8">
@@ -77,19 +83,16 @@ const App: React.FC = () => {
         )}
 
         {role === UserRole.MANAGER && (
-          <ManagerDashboard 
-            customers={customers} 
-            setCustomers={saveCustomers} 
-          />
+          <ManagerDashboard customers={customers} setCustomers={setCustomers} />
         )}
       </main>
 
       <Footer />
 
-      {isLoginModalOpen && (
+      {isManagerLoginOpen && (
         <ManagerLogin 
-          onSuccess={handleManagerAccess} 
-          onClose={() => setIsLoginModalOpen(false)} 
+          onSuccess={handleManagerLoginSuccess} 
+          onClose={() => setIsManagerLoginOpen(false)} 
         />
       )}
     </div>
