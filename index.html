@@ -22,8 +22,8 @@
 {
   "imports": {
     "@google/genai": "https://esm.sh/@google/genai@^1.38.0",
-    "react/": "https://esm.sh/react@^19.2.3/",
     "react": "https://esm.sh/react@^19.2.3",
+    "react/": "https://esm.sh/react@^19.2.3/",
     "lucide-react": "https://esm.sh/lucide-react@^0.562.0"
   }
 }
@@ -265,8 +265,12 @@
 
                 c.services.push(service);
                 c.totalServicesCount = (c.totalServicesCount || 0) + 1;
-                c.stamps = (c.stamps || 0) + 1;
-                if (c.stamps > 10) c.stamps = 1; // Restart cycle
+                
+                // Logic updated: Increment only if not already 10. 
+                // Manual redemption (app.redeemPrize) is now required to reset to 0.
+                if ((c.stamps || 0) < 10) {
+                    c.stamps = (c.stamps || 0) + 1;
+                }
 
                 this.save();
                 ui.toggleModal('service-modal', false);
@@ -274,7 +278,7 @@
             },
 
             redeemPrize(customerId) {
-                if(confirm("Confirmar resgate de prêmio (Geral Completa)?")) {
+                if(confirm("Confirmar resgate de prêmio (Geral Completa)? A contagem de selos voltará a zero para o próximo serviço.")) {
                     const c = this.customers.find(x => x.id === customerId);
                     c.stamps = 0;
                     this.save();
