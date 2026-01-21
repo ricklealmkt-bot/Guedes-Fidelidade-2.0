@@ -18,27 +18,15 @@ const App: React.FC = () => {
   useEffect(() => {
     const saved = localStorage.getItem('guedes_customers');
     if (saved) {
-      setCustomers(JSON.parse(saved));
+      try {
+        setCustomers(JSON.parse(saved));
+      } catch (e) {
+        console.error("Erro ao carregar dados salvos:", e);
+        setCustomers([]);
+      }
     } else {
-      // Mock initial customer for demo
-      const mock: Customer[] = [{
-        id: '1',
-        name: 'João Silva',
-        whatsapp: '31999999999',
-        vehicleModel: 'Honda Civic',
-        plate: 'QPS-8964',
-        birthDate: '1990-05-20',
-        referralSource: 'Instagram',
-        phone: '31999999999',
-        favoriteTeam: 'Atlético MG',
-        services: [
-          { id: 's1', type: 'Lavagem Simples', price: 50, date: new Date().toISOString() }
-        ],
-        stamps: 1,
-        totalServicesCount: 1
-      }];
-      setCustomers(mock);
-      localStorage.setItem('guedes_customers', JSON.stringify(mock));
+      // In production, we start with an empty database
+      setCustomers([]);
     }
   }, []);
 

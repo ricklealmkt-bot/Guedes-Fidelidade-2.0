@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Customer, Service, SERVICE_TYPES } from '../types';
-import { Plus, Search, FileDown, Edit2, Trash2, Calendar, DollarSign, UserPlus, X, Gift } from 'lucide-react';
+import { Plus, Search, FileDown, FileUp, Edit2, Trash2, Calendar, DollarSign, UserPlus, X, Gift } from 'lucide-react';
 
 interface ManagerDashboardProps {
   customers: Customer[];
@@ -14,6 +14,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ customers, setCusto
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // New Customer Form State
   const [newCustomer, setNewCustomer] = useState<Partial<Customer>>({
@@ -77,9 +78,6 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ customers, setCusto
     const updatedCustomers = customers.map(c => {
       if (c.id === selectedCustomer.id) {
         let newStamps = c.stamps + 1;
-        // If they already had 10, the 11th service is effectively the 1st of the next card,
-        // but typically the manager should redeem first.
-        // As per prompt: "após o sistema irá reiniciar novamente do zero toda a jornada de forma randômica."
         if (newStamps > 10) {
           newStamps = 1;
         }
@@ -105,7 +103,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ customers, setCusto
         if (c.id === customer.id) {
           return {
             ...c,
-            stamps: 0 // Reset stamps to zero after redemption
+            stamps: 0
           };
         }
         return c;
@@ -120,31 +118,44 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ customers, setCusto
     }
   };
 
-  const exportToCSV = () => {
-    const headers = ["Nome", "WhatsApp", "Placa", "Modelo", "Nascimento", "Origem", "Time", "Total Serviços", "Selos Atuais"];
-    const rows = customers.map(c => [
-      c.name, c.whatsapp, c.plate, c.vehicleModel, c.birthDate, c.referralSource, c.favoriteTeam, c.totalServicesCount, c.stamps
-    ]);
+  const exportData = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(customers));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `guedes_backup_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  };
 
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(",") + "\n"
-      + rows.map(e => e.join(",")).join("\n");
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `guedes_fidelidade_export_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const content = e.target?.result as string;
+          const imported = JSON.parse(content);
+          if (Array.isArray(imported)) {
+            if (window.confirm("Isso substituirá todos os dados atuais. Continuar?")) {
+              setCustomers(imported);
+              alert("Dados importados com sucesso!");
+            }
+          }
+        } catch (err) {
+          alert("Erro ao importar arquivo. Certifique-se que é um backup válido.");
+        }
+      };
+      reader.readAsText(file);
+    }
   };
 
   return (
     <div className="space-y-8 animate-fadeIn">
       {/* Header Actions */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+      <div className="flex flex-col lg:flex-row justify-between items-center gap-4">
         <h2 className="text-3xl font-black uppercase tracking-tighter">Gestão de Clientes</h2>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap justify-center gap-2">
           <button 
             onClick={() => { setEditingCustomer(null); setIsCustomerModalOpen(true); }}
             className="flex items-center gap-2 bg-[#fecb0a] text-black px-6 py-2 rounded-full font-bold text-sm hover:opacity-90"
@@ -152,11 +163,24 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ customers, setCusto
             <UserPlus size={18} /> NOVO CLIENTE
           </button>
           <button 
-            onClick={exportToCSV}
-            className="flex items-center gap-2 bg-gray-900 text-gray-300 border border-gray-800 px-6 py-2 rounded-full font-bold text-sm hover:bg-gray-800"
+            onClick={exportData}
+            className="flex items-center gap-2 bg-gray-900 text-gray-300 border border-gray-800 px-4 py-2 rounded-full font-bold text-sm hover:bg-gray-800"
           >
-            <FileDown size={18} /> EXPORTAR
+            <FileDown size={18} /> BACKUP
           </button>
+          <button 
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-2 bg-gray-900 text-gray-300 border border-gray-800 px-4 py-2 rounded-full font-bold text-sm hover:bg-gray-800"
+          >
+            <FileUp size={18} /> IMPORTAR
+          </button>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleImport} 
+            className="hidden" 
+            accept=".json"
+          />
         </div>
       </div>
 
@@ -190,7 +214,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ customers, setCusto
             <tbody className="divide-y divide-gray-900">
               {filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-600 italic">Nenhum cliente encontrado.</td>
+                  <td colSpan={5} className="px-6 py-12 text-center text-gray-600 italic">Nenhum cliente cadastrado.</td>
                 </tr>
               ) : (
                 filteredCustomers.map(customer => (

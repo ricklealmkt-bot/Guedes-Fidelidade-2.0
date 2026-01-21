@@ -14,28 +14,31 @@ const Header: React.FC<HeaderProps> = ({ role, onManagerClick, onLogout, onHomeC
   return (
     <header className="bg-black border-b border-gray-800 p-4 sticky top-0 z-50">
       <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-        {/* Logo & Name - Only visible if not on Home Page (Guest) */}
+        {/* Branding - Visible only when NOT in Guest mode */}
         <div 
-          className={`flex items-center gap-3 cursor-pointer transition-opacity duration-300 ${role === UserRole.GUEST ? 'opacity-0 pointer-events-none md:flex' : 'opacity-100'}`}
+          className={`flex items-center gap-3 cursor-pointer transition-all duration-300 ${role === UserRole.GUEST ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}
           onClick={onHomeClick}
-          style={{ visibility: role === UserRole.GUEST ? 'hidden' : 'visible' }}
         >
-          <img 
-            src="https://raw.githubusercontent.com/Lava-Jato-Guedes/logo/main/logo.png" 
-            alt="Guedes Logo" 
-            className="h-14 w-auto object-contain"
-            onError={(e) => {
-               e.currentTarget.src = "https://picsum.photos/seed/guedes/200/200";
-            }}
-          />
-          <div className="flex flex-col">
-            <h1 className="text-xl font-bold tracking-tighter text-white">
-              GUEDES LAVA JATO
-            </h1>
-            <span className="text-[10px] text-gray-400 tracking-widest uppercase">
-              Estética Automotiva
-            </span>
-          </div>
+          {role !== UserRole.GUEST && (
+            <>
+              <img 
+                src="https://raw.githubusercontent.com/Lava-Jato-Guedes/logo/main/logo.png" 
+                alt="Guedes Logo" 
+                className="h-12 w-auto object-contain"
+                onError={(e) => {
+                   e.currentTarget.src = "https://picsum.photos/seed/guedes/200/200";
+                }}
+              />
+              <div className="flex flex-col">
+                <h1 className="text-lg font-bold tracking-tighter text-white">
+                  GUEDES LAVA JATO
+                </h1>
+                <span className="text-[9px] text-gray-400 tracking-widest uppercase">
+                  Estética Automotiva
+                </span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Action Buttons */}
