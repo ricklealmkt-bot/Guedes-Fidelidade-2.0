@@ -7,37 +7,46 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #000; color: #fff; }
         .animate-fadeIn { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .gold-glow { text-shadow: 0 0 20px rgba(254, 203, 10, 0.5); }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
     <header class="bg-black border-b border-gray-900 p-4 sticky top-0 z-50">
         <div class="container mx-auto flex items-center justify-between">
-            <div id="brand-area" class="flex items-center gap-3 cursor-pointer opacity-0 transition-opacity">
+            <div id="brand-area" class="flex items-center gap-3 cursor-pointer opacity-0 transition-opacity duration-500">
                 <div class="bg-[#fecb0a] p-1.5 rounded-lg text-black"><i data-lucide="car" class="w-6 h-6"></i></div>
                 <div class="flex flex-col text-left">
                     <h1 class="text-sm font-black tracking-tighter leading-none">GUEDES LAVA JATO</h1>
                     <span class="text-[8px] text-gray-500 uppercase tracking-widest font-bold">Estética Automotiva</span>
                 </div>
             </div>
-            <button onclick="app.openManagerLogin()" class="flex items-center gap-2 bg-gray-900 text-gray-400 px-4 py-2 rounded-full font-bold text-xs border border-gray-800">
-                <i data-lucide="shield-check" class="w-4 h-4"></i> GESTOR
-            </button>
+            <div class="flex gap-2">
+                <div id="client-exit-btn" class="hidden">
+                    <button onclick="app.setRole('GUEST')" class="flex items-center gap-2 bg-red-900/20 text-red-500 px-4 py-2 rounded-full font-bold text-xs border border-red-900/30">
+                        <i data-lucide="log-out" class="w-4 h-4"></i> SAIR
+                    </button>
+                </div>
+                <button onclick="app.openManagerLogin()" class="flex items-center gap-2 bg-gray-900 text-gray-400 px-4 py-2 rounded-full font-bold text-xs border border-gray-800">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i> GESTOR
+                </button>
+            </div>
         </div>
     </header>
 
-    <main id="app-content" class="flex-grow container mx-auto px-4 py-8"></main>
+    <main id="app-content" class="flex-grow container mx-auto px-4 py-8 flex flex-col justify-center"></main>
 
     <footer class="bg-black border-t border-gray-900 py-8 text-gray-600">
         <div class="container mx-auto px-4 text-center space-y-4">
             <p class="text-[10px] font-bold uppercase tracking-[0.2em]">Rua Batista Carneiro, 113 - Salgado Filho – BH/MG</p>
             <div id="contact-footer" class="hidden flex justify-center">
-                <a href="https://wa.me/5531982077291" class="flex items-center gap-2 bg-[#075e54]/20 text-[#25d366] px-4 py-2 rounded-full border border-[#25d366]/30 text-xs font-bold">
-                    <i data-lucide="message-circle" class="w-4 h-4"></i> (31) 98207-7291
+                <a href="https://wa.me/5531982077291" target="_blank" class="flex items-center gap-2 bg-[#25d366]/10 text-[#25d366] px-5 py-2.5 rounded-full border border-[#25d366]/20 text-xs font-bold transition-all hover:scale-105">
+                    <i data-lucide="message-circle" class="w-4 h-4 fill-current"></i> AGENDAR SERVIÇO: (31) 98207-7291
                 </a>
             </div>
             <p class="text-[9px]">© 2024 GUEDES FIDELIDADE DIGITAL</p>
@@ -48,6 +57,7 @@
         window.app = {
             role: 'GUEST',
             customers: JSON.parse(localStorage.getItem('guedes_db') || '[]'),
+            currentCustomer: null,
             
             init() { this.render(); },
             save() { localStorage.setItem('guedes_db', JSON.stringify(this.customers)); },
@@ -56,6 +66,9 @@
                 this.role = role;
                 this.currentCustomer = data;
                 this.render();
+                if (role === 'CUSTOMER' && data.stamps === 10) {
+                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#fecb0a', '#ffffff'] });
+                }
             },
 
             openManagerLogin() {
@@ -63,99 +76,77 @@
                 if(p === 'FideliGuedes26#') this.setRole('MANAGER');
             },
 
-            // --- FUNÇÕES DE GESTÃO ---
-            exportBackup() {
-                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.customers));
-                const dlAnchorElem = document.createElement('a');
-                dlAnchorElem.setAttribute("href", dataStr);
-                dlAnchorElem.setAttribute("download", "backup_guedes.json");
-                dlAnchorElem.click();
+            loginCustomer() {
+                const val = document.getElementById('login-input').value.trim().toUpperCase();
+                const found = this.customers.find(c => c.plate === val);
+                if (found) this.setRole('CUSTOMER', found);
+                else alert("Placa não encontrada!");
             },
 
-            importBackup() {
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.onchange = e => {
-                    const file = e.target.files[0];
-                    const reader = new FileReader();
-                    reader.onload = event => {
-                        this.customers = JSON.parse(event.target.result);
-                        this.save(); this.render();
-                        alert("Dados importados!");
-                    };
-                    reader.readAsText(file);
-                };
-                input.click();
-            },
-
-            editCustomer(id) {
-                const c = this.customers.find(x => x.id === id);
-                const n = prompt("Novo Nome:", c.name);
-                const p = prompt("Nova Placa:", c.plate);
-                if(n && p) { c.name = n; c.plate = p.toUpperCase(); this.save(); this.render(); }
-            },
-
-            // --- RENDERIZAÇÃO ---
             render() {
                 const content = document.getElementById('app-content');
                 document.getElementById('brand-area').style.opacity = (this.role === 'GUEST') ? '0' : '1';
                 document.getElementById('contact-footer').classList.toggle('hidden', this.role === 'GUEST');
+                document.getElementById('client-exit-btn').classList.toggle('hidden', this.role !== 'CUSTOMER');
 
                 if (this.role === 'GUEST') {
                     content.innerHTML = `
-                        <div class="max-w-xl mx-auto py-20 animate-fadeIn text-center space-y-12">
-                            <h2 class="text-7xl font-black italic uppercase tracking-tighter">Fidelidade</h2>
-                            <div class="bg-[#111] p-10 rounded-[3rem] border border-gray-900 shadow-2xl space-y-6">
-                                <input id="login-input" placeholder="SUA PLACA" class="w-full bg-black border-2 border-gray-800 rounded-2xl py-5 text-center text-3xl font-black uppercase focus:border-[#fecb0a] outline-none">
-                                <button onclick="app.setRole('CUSTOMER', app.customers.find(c=>c.plate===document.getElementById('login-input').value.toUpperCase()))" class="w-full bg-[#fecb0a] text-black py-5 rounded-2xl font-black text-xl uppercase shadow-lg">Ver Meus Selos</button>
+                        <div class="max-w-2xl mx-auto animate-fadeIn text-center space-y-12 py-10">
+                            <div class="space-y-1">
+                                <h2 class="text-6xl md:text-8xl font-black italic uppercase tracking-tighter gold-glow leading-none">GUEDES</h2>
+                                <h3 class="text-3xl md:text-5xl font-light uppercase tracking-[0.4em] text-gray-500">FIDELIDADE</h3>
+                            </div>
+                            <div class="bg-[#0a0a0a] p-10 rounded-[3rem] border border-gray-900 shadow-2xl space-y-6">
+                                <input id="login-input" placeholder="DIGITE SUA PLACA" class="w-full bg-black border-2 border-gray-800 rounded-2xl py-6 text-center text-3xl font-black uppercase focus:border-[#fecb0a] outline-none">
+                                <button onclick="app.loginCustomer()" class="w-full bg-[#fecb0a] text-black py-5 rounded-2xl font-black text-xl uppercase shadow-lg transition-all active:scale-95">Ver Meus Selos</button>
                             </div>
                         </div>`;
                 } 
                 else if (this.role === 'MANAGER') {
                     content.innerHTML = `
-                        <div class="animate-fadeIn space-y-8">
-                            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
-                                <h2 class="text-4xl font-black uppercase italic">Gestão de Dados</h2>
-                                <div class="flex gap-2">
-                                    <button onclick="app.exportBackup()" class="bg-gray-800 text-white px-4 py-2 rounded-xl text-[10px] font-bold uppercase flex items-center gap-2"><i data-lucide="download" class="w-3 h-3"></i> Backup</button>
-                                    <button onclick="app.importBackup()" class="bg-gray-800 text-white px-4 py-2 rounded-xl text-[10px] font-bold uppercase flex items-center gap-2"><i data-lucide="upload" class="w-3 h-3"></i> Importar</button>
-                                    <button onclick="const n=prompt('Nome:'), p=prompt('Placa:'); if(n&&p){app.customers.push({id:Date.now(), name:n, plate:p.toUpperCase(), stamps:0}); app.save(); app.render();}" class="bg-[#fecb0a] text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase">+ Novo</button>
-                                </div>
+                        <div class="animate-fadeIn space-y-8 w-full">
+                            <div class="flex justify-between items-center">
+                                <h2 class="text-4xl font-black uppercase italic tracking-tighter">Gestão</h2>
+                                <button onclick="const n=prompt('Nome:'), p=prompt('Placa:'); if(n&&p){app.customers.push({id:Date.now(), name:n, plate:p.toUpperCase(), stamps:0}); app.save(); app.render();}" class="bg-[#fecb0a] text-black px-8 py-3 rounded-2xl font-black text-xs uppercase shadow-lg">+ Novo Cadastro</button>
                             </div>
-                            <div class="grid gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 ${this.customers.map(c => `
-                                    <div class="bg-[#111] p-6 rounded-3xl border border-gray-900 flex justify-between items-center">
-                                        <div>
-                                            <h4 class="font-black text-xl">${c.name}</h4>
-                                            <span class="text-[#fecb0a] font-bold uppercase">${c.plate}</span>
+                                    <div class="bg-[#0a0a0a] p-6 rounded-3xl border border-gray-900 flex justify-between items-center">
+                                        <div class="text-left">
+                                            <h4 class="font-black text-lg leading-none">${c.name}</h4>
+                                            <span class="text-[#fecb0a] font-bold text-sm tracking-widest uppercase">${c.plate}</span>
                                         </div>
                                         <div class="flex gap-2">
-                                            <button onclick="if(c.stamps<10){c.stamps++; app.save(); app.render();}" class="bg-green-600 p-3 rounded-xl"><i data-lucide="plus" class="w-5 h-5"></i></button>
-                                            <button onclick="app.editCustomer(${c.id})" class="bg-blue-600 p-3 rounded-xl"><i data-lucide="edit-3" class="w-5 h-5"></i></button>
-                                            <button onclick="if(confirm('Excluir?')){app.customers=app.customers.filter(x=>x.id!=${c.id}); app.save(); app.render();}" class="bg-red-600 p-3 rounded-xl"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                                            <button onclick="if(c.stamps<10){c.stamps++; app.save(); app.render();}" class="bg-green-600/20 text-green-500 border border-green-600/30 p-3 rounded-xl hover:bg-green-600 hover:text-white transition-all"><i data-lucide="plus" class="w-5 h-5"></i></button>
+                                            <button onclick="if(confirm('Excluir?')){app.customers=app.customers.filter(x=>x.id!=${c.id}); app.save(); app.render();}" class="bg-red-600/20 text-red-500 border border-red-600/30 p-3 rounded-xl hover:bg-red-600 hover:text-white transition-all"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
                                         </div>
                                     </div>
                                 `).join('')}
                             </div>
+                            <button onclick="app.setRole('GUEST')" class="w-full py-10 text-gray-700 font-black uppercase text-[10px] tracking-[0.3em]">Deslogar Gestor</button>
                         </div>`;
                 }
-                else if (this.role === 'CUSTOMER' && this.currentCustomer) {
+                else if (this.role === 'CUSTOMER') {
+                    const isWinner = this.currentCustomer.stamps === 10;
                     content.innerHTML = `
-                        <div class="max-w-2xl mx-auto py-8 animate-fadeIn text-center space-y-8">
-                            <div class="bg-[#111] p-8 rounded-[2.5rem] border border-gray-900">
-                                <h3 class="text-3xl font-black uppercase italic">${this.currentCustomer.name}</h3>
-                                <p class="text-[#fecb0a] font-bold mb-6">${this.currentCustomer.plate}</p>
-                                <div class="grid grid-cols-5 gap-3">
+                        <div class="max-w-2xl mx-auto py-4 animate-fadeIn text-center space-y-8">
+                            <div class="bg-[#0a0a0a] p-10 rounded-[3rem] border ${isWinner ? 'border-[#fecb0a]' : 'border-gray-900'} shadow-2xl space-y-8">
+                                <div class="space-y-1">
+                                    <p class="text-[10px] font-black text-gray-600 uppercase tracking-widest">Cartão Digital</p>
+                                    <h3 class="text-4xl font-black italic uppercase">${this.currentCustomer.name}</h3>
+                                    <p class="text-[#fecb0a] font-black tracking-[0.2em] text-xl">${this.currentCustomer.plate}</p>
+                                </div>
+                                <div class="grid grid-cols-5 gap-3 max-w-sm mx-auto">
                                     ${Array.from({length: 10}).map((_, i) => `
-                                        <div class="aspect-square rounded-2xl border-2 flex items-center justify-center ${i < this.currentCustomer.stamps ? 'bg-[#fecb0a] border-white text-black' : 'bg-black border-gray-800 text-gray-800'}">
+                                        <div class="aspect-square rounded-2xl border-2 flex items-center justify-center transition-all duration-700 ${i < this.currentCustomer.stamps ? 'bg-[#fecb0a] border-white text-black scale-105 shadow-[0_0_15px_rgba(254,203,10,0.5)]' : 'bg-black border-gray-800 text-gray-900'}">
                                             <i data-lucide="star" class="w-6 h-6 ${i < this.currentCustomer.stamps ? 'fill-current' : ''}"></i>
                                         </div>
                                     `).join('')}
                                 </div>
+                                ${isWinner ? `<h4 class="text-white font-black text-xl uppercase italic animate-bounce pt-4">Você ganhou uma Geral Completa!</h4>` : ''}
                             </div>
-                            <button onclick="app.setRole('GUEST')" class="text-gray-600 font-bold uppercase text-[10px]">Voltar</button>
                         </div>`;
-                } else if (this.role === 'CUSTOMER') { alert("Placa não encontrada!"); this.setRole('GUEST'); }
+                }
                 lucide.createIcons();
             }
         };
