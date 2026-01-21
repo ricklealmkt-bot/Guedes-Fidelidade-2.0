@@ -11,15 +11,18 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ role, onManagerClick, onLogout, onHomeClick }) => {
+  // O logotipo e nome devem aparecer APENAS para o Cliente (Role CUSTOMER)
+  const showBranding = role === UserRole.CUSTOMER;
+
   return (
     <header className="bg-black border-b border-gray-800 p-4 sticky top-0 z-50">
       <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-        {/* Branding - Visible only when NOT in Guest mode */}
+        {/* Branding - Visível apenas para CUSTOMER conforme solicitado */}
         <div 
-          className={`flex items-center gap-3 cursor-pointer transition-all duration-300 ${role === UserRole.GUEST ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}
+          className={`flex items-center gap-3 cursor-pointer transition-all duration-300 ${!showBranding ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}
           onClick={onHomeClick}
         >
-          {role !== UserRole.GUEST && (
+          {showBranding && (
             <>
               <img 
                 src="https://raw.githubusercontent.com/Lava-Jato-Guedes/logo/main/logo.png" 

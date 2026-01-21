@@ -77,10 +77,12 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ customers, setCusto
 
     const updatedCustomers = customers.map(c => {
       if (c.id === selectedCustomer.id) {
-        let newStamps = c.stamps + 1;
-        if (newStamps > 10) {
-          newStamps = 1;
+        // Lógica linear: O selo só aumenta se ainda não for 10
+        let newStamps = c.stamps;
+        if (newStamps < 10) {
+            newStamps += 1;
         }
+        
         return {
           ...c,
           services: [...c.services, service],
@@ -98,17 +100,27 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ customers, setCusto
   };
 
   const handleRedeemPrize = (customer: Customer) => {
-    if (window.confirm(`Confirmar resgate do prêmio de GERAL COMPLETA para ${customer.name}?`)) {
+    if (window.confirm(`Confirmar resgate do prêmio de GERAL COMPLETA para ${customer.name}? O cartão voltará a zero para nova contagem.`)) {
       const updatedCustomers = customers.map(c => {
         if (c.id === customer.id) {
+          // Adiciona registro de resgate no histórico para manter a linearidade/auditoria
+          const redemption: Service = {
+            id: Date.now().toString(),
+            type: "RESGATE DE PRÊMIO: Geral Completa",
+            price: 0,
+            date: new Date().toISOString()
+          };
+          
           return {
             ...c,
-            stamps: 0
+            services: [...c.services, redemption],
+            stamps: 0 // Reinicia a contagem dos selos
           };
         }
         return c;
       });
       setCustomers(updatedCustomers);
+      alert("Prêmio resgatado com sucesso! Contagem reiniciada.");
     }
   };
 
@@ -228,7 +240,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ customers, setCusto
                          </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-400">{customer.whatsapp}</td>
+                    <td className="px-6 py-4 text-sm text-gray-400">{(customer as any).phone || customer.whatsapp}</td>
                     <td className="px-6 py-4">
                       <span className="text-[10px] bg-gray-900 text-gray-400 px-2 py-1 rounded-full font-bold">
                         {customer.totalServicesCount} SERV.
@@ -250,7 +262,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ customers, setCusto
                           <button 
                             onClick={() => handleRedeemPrize(customer)}
                             title="Resgatar Prêmio (Geral Completa)"
-                            className="p-2 bg-[#fecb0a]/20 text-[#fecb0a] hover:bg-[#fecb0a]/30 rounded-xl transition-all border border-[#fecb0a]/30"
+                            className="p-2 bg-[#fecb0a] text-black hover:scale-105 rounded-xl transition-all shadow-[0_0_10px_rgba(254,203,10,0.3)]"
                           >
                             <Gift size={18} />
                           </button>
@@ -322,7 +334,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ customers, setCusto
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Como nos conheceu?</label>
-                <select value={newCustomer.referralSource} onChange={e => setNewCustomer({...newCustomer, referralSource: e.target.value})} className="w-full bg-black border border-gray-800 p-3 rounded-xl focus:border-[#fecb0a] outline-none">
+                <select value={newCustomer.referralSource} onChange={e => setNewCustomer({...newCustomer, referralSource: e.target.value})} className="w-full bg-black border border-gray-800 p-3 rounded-xl focus:border-[#fecb0a] outline-none text-gray-400">
                    <option value="">Selecione...</option>
                    <option value="Instagram">Instagram</option>
                    <option value="WhatsApp">WhatsApp</option>
