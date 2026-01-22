@@ -3,23 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guedes Fidelidade</title>
+    <title>Guedes Fidelidade 2.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #000; color: #fff; margin: 0; overflow-x: hidden; }
+        body { font-family: 'Inter', sans-serif; background-color: #000; color: #fff; margin: 0; }
         .gold-glow { text-shadow: 0 0 40px rgba(254, 203, 10, 0.7); }
-        .animate-fadeIn { animation: fadeIn 0.6s ease-out forwards; }
+        .animate-fadeIn { animation: fadeIn 0.5s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .main-container { min-height: 100vh; display: flex; flex-direction: column; }
-        input::placeholder { color: #333; }
+        .main-container { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
     </style>
 </head>
 <body class="main-container">
 
-    <header id="app-header" class="bg-black/50 backdrop-blur-md border-b border-gray-900 p-5 sticky top-0 z-50 transition-all duration-500 transform -translate-y-full opacity-0">
+    <header id="app-header" class="bg-black/80 backdrop-blur-md border-b border-gray-900 p-5 sticky top-0 z-50 hidden">
         <div class="container mx-auto flex items-center justify-between">
             <div class="flex items-center gap-4">
                 <div class="bg-[#fecb0a] p-2 rounded-xl text-black shadow-[0_0_15px_rgba(254,203,10,0.4)]">
@@ -30,17 +29,15 @@
                     <span class="text-[8px] text-gray-500 uppercase tracking-[0.3em] font-bold">Estética Automotiva</span>
                 </div>
             </div>
-            <button onclick="app.logout()" class="bg-red-900/10 text-red-500 px-5 py-2 rounded-full font-black text-[10px] border border-red-900/20 hover:bg-red-500 hover:text-white transition-all">
-                SAIR
-            </button>
+            <button onclick="app.logout()" class="bg-red-900/10 text-red-500 px-5 py-2 rounded-full font-black text-[10px] border border-red-900/20 hover:bg-red-500 hover:text-white transition-all">SAIR</button>
         </div>
     </header>
 
     <main id="app-content" class="flex-grow flex flex-col justify-center items-center px-6 py-12"></main>
 
-    <footer id="app-footer" class="bg-black border-t border-gray-900 py-10 text-gray-700">
+    <footer class="bg-black border-t border-gray-900 py-10 text-gray-700">
         <div class="container mx-auto text-center space-y-5">
-            <div id="footer-wa" class="hidden animate-fadeIn">
+            <div id="footer-wa" class="hidden">
                 <a href="https://wa.me/5531982077291" target="_blank" class="inline-flex items-center gap-3 bg-[#25d366]/5 text-[#25d366] px-8 py-3 rounded-full border border-[#25d366]/20 text-xs font-black hover:scale-105 transition-all">
                     <i data-lucide="message-circle" class="w-4 h-4"></i> AGENDAR SERVIÇO (31) 98207-7291
                 </a>
@@ -65,45 +62,34 @@
                 const header = document.getElementById('app-header');
                 const footerWa = document.getElementById('footer-wa');
 
-                // Animação do Header
-                if(this.role === 'HOME') {
-                    header.classList.add('-translate-y-full', 'opacity-0');
-                    setTimeout(() => header.classList.add('hidden'), 500);
-                    footerWa.classList.add('hidden');
-                } else {
-                    header.classList.remove('hidden');
-                    setTimeout(() => header.classList.remove('-translate-y-full', 'opacity-0'), 10);
-                    footerWa.classList.remove('hidden');
-                }
+                header.classList.toggle('hidden', this.role === 'HOME');
+                footerWa.classList.toggle('hidden', this.role === 'HOME');
 
                 if (this.role === 'HOME') {
                     main.innerHTML = `
                         <div class="w-full max-w-4xl animate-fadeIn space-y-16 text-center">
                             <div class="space-y-2">
-                                <h2 class="text-8xl md:text-[12rem] font-black italic gold-glow leading-none uppercase tracking-tighter">GUEDES</h2>
+                                <h2 class="text-8xl md:text-[11rem] font-black italic gold-glow leading-none uppercase tracking-tighter">GUEDES</h2>
                                 <h3 class="text-3xl md:text-5xl font-light tracking-[0.5em] text-gray-600 uppercase">Fidelidade</h3>
                             </div>
-                            
-                            <div class="max-w-md mx-auto bg-[#0a0a0a] p-12 rounded-[4rem] border border-gray-900 shadow-[0_40px_100px_rgba(0,0,0,0.8)] space-y-8">
+                            <div class="max-w-md mx-auto bg-[#0a0a0a] p-12 rounded-[4rem] border border-gray-900 shadow-2xl space-y-8">
                                 <input id="placa-in" placeholder="SUA PLACA" class="w-full bg-black border-b-2 border-gray-800 focus:border-[#fecb0a] py-6 text-center text-4xl font-black uppercase outline-none transition-all text-white">
                                 <button onclick="app.checkClient()" class="w-full bg-[#fecb0a] text-black py-6 rounded-[2rem] font-black text-xl uppercase shadow-xl hover:bg-white active:scale-95 transition-all">Ver Meus Selos</button>
                             </div>
-
-                            <button onclick="app.adminLogin()" class="text-[10px] text-gray-800 font-bold tracking-[0.3em] uppercase hover:text-gray-400 transition-colors">Acesso Administrativo</button>
+                            <button onclick="app.adminLogin()" class="text-[10px] text-gray-800 font-bold tracking-[0.3em] uppercase hover:text-gray-400 transition-colors">Acesso Gestor</button>
                         </div>`;
                 } 
                 else if (this.role === 'CLIENTE') {
                     const win = this.current.stamps === 10;
                     main.innerHTML = `
                         <div class="w-full max-w-lg animate-fadeIn text-center space-y-10">
-                            <div class="bg-[#0a0a0a] p-12 rounded-[4rem] border ${win ? 'border-[#fecb0a]' : 'border-gray-900'} shadow-2xl space-y-10 relative">
+                            <div class="bg-[#0a0a0a] p-12 rounded-[4rem] border ${win ? 'border-[#fecb0a]' : 'border-gray-900'} shadow-2xl space-y-10">
                                 <div class="space-y-2">
                                     <p class="text-[10px] font-black text-gray-700 uppercase tracking-[0.4em]">Cartão Fidelidade</p>
                                     <h3 class="text-5xl font-black italic uppercase">${this.current.name}</h3>
                                     <p class="text-[#fecb0a] font-black tracking-[0.3em] text-2xl uppercase">${this.current.plate}</p>
-                                    ${(this.current.goldCount || 0) > 0 ? `<div class="bg-yellow-500/10 text-yellow-500 inline-block px-4 py-1 rounded-full text-[10px] font-black uppercase mt-4 italic">Histórico: ${this.current.goldCount} Geral Completa 🏆</div>` : ''}
+                                    ${(this.current.goldCount || 0) > 0 ? `<div class="bg-yellow-500/10 text-yellow-500 inline-block px-4 py-1 rounded-full text-[10px] font-black uppercase mt-4 italic">🏆 Prêmios Resgatados: ${this.current.goldCount}</div>` : ''}
                                 </div>
-
                                 <div class="grid grid-cols-5 gap-4">
                                     ${Array.from({length: 10}).map((_, i) => `
                                         <div class="aspect-square rounded-2xl border-2 flex items-center justify-center transition-all duration-700 ${i < this.current.stamps ? 'bg-[#fecb0a] border-white text-black scale-110 shadow-[0_0_20px_rgba(254,203,10,0.4)]' : 'bg-black border-gray-900 text-gray-800'}">
@@ -111,9 +97,8 @@
                                         </div>
                                     `).join('')}
                                 </div>
-
-                                <div class="pt-6">
-                                    ${win ? `<h4 class="text-white font-black text-2xl uppercase italic animate-bounce">Prêmio Liberado!</h4>` : `<p class="text-xs font-bold text-gray-500 uppercase tracking-widest text-center">Faltam <span class="text-white font-black">${10 - this.current.stamps} selos</span> para o prêmio</p>`}
+                                <div>
+                                    ${win ? `<h4 class="text-white font-black text-2xl uppercase italic animate-bounce">Prêmio Disponível! 🏁</h4>` : `<p class="text-xs font-bold text-gray-500 uppercase tracking-widest">Faltam <span class="text-white font-black">${10 - this.current.stamps} selos</span> para o prêmio</p>`}
                                 </div>
                             </div>
                         </div>`;
@@ -122,7 +107,7 @@
                     main.innerHTML = `
                         <div class="w-full max-w-4xl animate-fadeIn space-y-10">
                             <div class="flex justify-between items-center">
-                                <h2 class="text-4xl font-black uppercase italic italic">Gestão</h2>
+                                <h2 class="text-4xl font-black uppercase italic">Gestão de Dados</h2>
                                 <button onclick="app.novoCliente()" class="bg-[#fecb0a] text-black px-8 py-4 rounded-3xl font-black text-xs uppercase shadow-lg">+ Novo Cadastro</button>
                             </div>
                             <div class="grid grid-cols-1 gap-4">
@@ -131,9 +116,9 @@
                                         <div class="text-center md:text-left">
                                             <h4 class="font-black text-2xl uppercase text-white leading-none">${c.name}</h4>
                                             <span class="text-[#fecb0a] font-bold tracking-widest uppercase">${c.plate}</span>
-                                            <div class="flex gap-4 mt-3 justify-center md:justify-start">
-                                                <span class="text-[10px] text-gray-600 font-black uppercase">Selos: ${c.stamps}/10</span>
-                                                <span class="text-[10px] text-yellow-600 font-black uppercase">Golds: ${c.goldCount || 0}</span>
+                                            <div class="flex gap-4 mt-3 justify-center md:justify-start text-[10px] font-black uppercase">
+                                                <span class="text-gray-600">Selos: ${c.stamps}/10</span>
+                                                <span class="text-yellow-600">Golds: ${c.goldCount || 0}</span>
                                             </div>
                                         </div>
                                         <div class="flex items-center gap-3">
@@ -141,12 +126,11 @@
                                                 `<button onclick="app.resetCycle('${c.id}')" class="bg-yellow-500 text-black px-6 py-4 rounded-2xl font-black text-xs uppercase hover:bg-white transition-all">Liberar Prêmio</button>` :
                                                 `<button onclick="app.addStamp('${c.id}')" class="bg-green-600/10 text-green-500 border border-green-600/20 p-4 rounded-2xl hover:bg-green-600 hover:text-white transition-all"><i data-lucide="plus" class="w-6 h-6"></i></button>`
                                             }
-                                            <button onclick="app.removeStamp('${c.id}')" class="bg-orange-600/10 text-orange-500 border border-orange-600/20 p-4 rounded-2xl hover:bg-orange-600 hover:text-white transition-all"><i data-lucide="minus-circle" class="w-6 h-6"></i></button>
-                                            <button onclick="app.deleteClient('${c.id}')" class="bg-red-600/10 text-red-500 border border-red-600/20 p-4 rounded-2xl hover:bg-red-600 hover:text-white transition-all"><i data-lucide="trash-2" class="w-6 h-6"></i></button>
+                                            <button onclick="app.removeStamp('${c.id}')" class="bg-orange-600/10 text-orange-500 border border-orange-600/20 p-4 rounded-2xl hover:bg-orange-600 hover:text-white transition-all" title="Excluir Registro"><i data-lucide="minus-circle" class="w-6 h-6"></i></button>
+                                            <button onclick="app.deleteClient('${c.id}')" class="bg-red-600/10 text-red-500 border border-red-600/20 p-4 rounded-2xl hover:bg-red-600 hover:text-white transition-all" title="Excluir Cliente"><i data-lucide="trash-2" class="w-6 h-6"></i></button>
                                         </div>
                                     </div>
                                 `).join('')}
-                                ${this.db.length === 0 ? '<p class="text-center py-20 text-gray-800 font-black uppercase tracking-widest">Nenhum cliente na base</p>' : ''}
                             </div>
                         </div>`;
                 }
@@ -158,7 +142,7 @@
                 const c = this.db.find(x => x.plate === p);
                 if(c) { 
                     this.role = 'CLIENTE'; this.current = c; this.render();
-                    if(c.stamps === 10) confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 }, colors: ['#fecb0a', '#ffffff', '#ffd700'] });
+                    if(c.stamps === 10) confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 }, colors: ['#fecb0a', '#ffffff'] });
                 } else alert("Placa não encontrada!");
             },
 
@@ -183,14 +167,14 @@
 
             removeStamp(id) {
                 const c = this.db.find(x => x.id == id);
-                if(c && c.stamps > 0) { 
-                    if(confirm("Excluir o último registro?")) { c.stamps--; this.save(); this.render(); }
+                if(c && c.stamps > 0 && confirm("Excluir o último registro de serviço deste cliente?")) { 
+                    c.stamps--; this.save(); this.render(); 
                 }
             },
 
             resetCycle(id) {
                 const c = this.db.find(x => x.id == id);
-                if(c && confirm("Resgatar prêmio e iniciar novo ciclo?")) {
+                if(c && confirm("Confirmar resgate do prêmio? O ciclo voltará a zero e o histórico será atualizado.")) {
                     c.stamps = 0;
                     c.goldCount = (c.goldCount || 0) + 1;
                     this.save(); this.render();
@@ -198,7 +182,7 @@
             },
 
             deleteClient(id) {
-                if(confirm("Excluir definitivamente?")) { 
+                if(confirm("Deseja excluir este cliente e todo o seu histórico definitivamente?")) { 
                     this.db = this.db.filter(x => x.id != id); this.save(); this.render(); 
                 }
             }
