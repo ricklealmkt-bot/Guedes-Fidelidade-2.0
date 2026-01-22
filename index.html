@@ -3,132 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guedes Fidelidade</title>
+    <title>Guedes Fidelidade 2.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
-        body { background-color: #000; color: #fff; font-family: sans-serif; }
-        .gold-glow { text-shadow: 0 0 20px rgba(254, 203, 10, 0.5); }
+        body { font-family: 'Inter', sans-serif; background-color: #000; color: #fff; }
+        .gold-glow { text-shadow: 0 0 30px rgba(254, 203, 10, 0.6); }
+        .animate-fadeIn { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center p-4 text-center">
+<body class="min-h-screen flex flex-col">
 
-    <div id="app" class="w-full max-w-md space-y-12">
-        <div class="animate-pulse text-gray-700 font-bold uppercase tracking-widest">Carregando Sistema...</div>
-    </div>
+    <header class="bg-black border-b border-gray-900 p-4 sticky top-0 z-50">
+        <div class="container mx-auto flex items-center justify-between">
+            <div id="header-brand" class="flex items-center gap-3 opacity-0 transition-opacity duration-500">
+                <div class="bg-[#fecb0a] p-1.5 rounded-lg text-black"><i data-lucide="car" class="w-6 h-6"></i></div>
+                <div class="flex flex-col text-left">
+                    <h1 class="text-sm font-black tracking-tighter leading-none">GUEDES LAVA JATO</h1>
+                    <span class="text-[8px] text-gray-500 uppercase tracking-widest font-bold">Estética Automotiva</span>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <div id="btn-sair-cliente" class="hidden">
+                    <button onclick="app.logout()" class="flex items-center gap-2 bg-red-900/20 text-red-500 px-4 py-2 rounded-full font-bold text-xs border border-red-900/30 hover:bg-red-900 hover:text-white transition-all">
+                        <i data-lucide="log-out" class="w-4 h-4"></i> SAIR
+                    </button>
+                </div>
+                <button id="btn-gestor" onclick="app.loginGestor()" class="flex items-center gap-2 bg-gray-900 text-gray-400 px-4 py-2 rounded-full font-bold text-xs border border-gray-800 hover:text-white transition-all">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i> GESTOR
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main id="app-content" class="flex-grow container mx-auto px-4 py-8 flex flex-col justify-center"></main>
+
+    <footer class="bg-black border-t border-gray-900 py-8 text-gray-600">
+        <div class="container mx-auto px-4 text-center space-y-4">
+            <p class="text-[10px] font-bold uppercase tracking-[0.2em]">Rua Batista Carneiro, 113 - Salgado Filho – BH/MG</p>
+            <div id="footer-contact" class="hidden flex justify-center">
+                <a href="https://wa.me/5531982077291" target="_blank" class="flex items-center gap-2 bg-[#25d366]/10 text-[#25d366] px-5 py-2.5 rounded-full border border-[#25d366]/20 text-xs font-bold transition-all hover:scale-105">
+                    <i data-lucide="message-circle" class="w-4 h-4 fill-current"></i> AGENDAR SERVIÇO: (31) 98207-7291
+                </a>
+            </div>
+            <p class="text-[9px]">© 2026 GUEDES FIDELIDADE DIGITAL • BH/MG</p>
+        </div>
+    </footer>
 
     <script>
-        const app = {
-            customers: JSON.parse(localStorage.getItem('guedes_db') || '[]'),
-            
-            init() {
-                this.renderLogin();
-                // Força a atualização dos ícones após o render
-                setTimeout(() => lucide.createIcons(), 100);
+        window.app = {
+            role: 'VISITANTE',
+            db: JSON.parse(localStorage.getItem('guedes_db') || '[]'),
+            current: null,
+
+            init() { this.render(); },
+            save() { localStorage.setItem('guedes_db', JSON.stringify(this.db)); },
+            logout() { this.role = 'VISITANTE'; this.current = null; this.render(); },
+
+            loginGestor() {
+                const p = prompt("Senha:");
+                if(p === 'FideliGuedes26#') { this.role = 'GESTOR'; this.render(); }
             },
 
-            renderLogin() {
-                document.getElementById('app').innerHTML = `
-                    <div class="space-y-8">
-                        <div class="space-y-2">
-                            <h2 class="text-6xl font-black italic gold-glow tracking-tighter">GUEDES</h2>
-                            <h3 class="text-2xl font-light tracking-[0.3em] text-gray-500 uppercase">Fidelidade</h3>
-                        </div>
-                        <div class="bg-[#111] p-8 rounded-[2.5rem] border border-gray-900 shadow-2xl">
-                            <input id="plate-in" placeholder="DIGITE SUA PLACA" class="w-full bg-black border-2 border-gray-800 rounded-2xl py-5 text-center text-2xl font-black uppercase focus:border-[#fecb0a] outline-none mb-4 text-white">
-                            <button onclick="app.checkClient()" class="w-full bg-[#fecb0a] text-black py-5 rounded-2xl font-black text-lg uppercase shadow-lg active:scale-95 transition-all">Ver Meus Selos</button>
-                        </div>
-                        <button onclick="app.admin()" class="text-[10px] text-gray-700 font-bold tracking-widest uppercase hover:text-gray-400">Acesso Gestor</button>
-                    </div>
-                `;
+            loginCliente() {
+                const p = document.getElementById('input-placa').value.trim().toUpperCase();
+                const c = this.db.find(x => x.plate === p);
+                if(c) { 
+                    this.role = 'CLIENTE'; 
+                    this.current = c; 
+                    this.render(); 
+                    if(c.stamps === 10) confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#fecb0a', '#ffffff'] });
+                } else alert("Placa não encontrada!");
             },
 
-            checkClient() {
-                const val = document.getElementById('plate-in').value.trim().toUpperCase();
-                const client = this.customers.find(c => c.plate === val);
-                if(client) this.renderCard(client);
-                else alert("Placa não encontrada!");
-            },
+            render() {
+                const main = document.getElementById('app-content');
+                document.getElementById('header-brand').style.opacity = (this.role === 'VISITANTE') ? '0' : '1';
+                document.getElementById('footer-contact').classList.toggle('hidden', this.role === 'VISITANTE');
+                document.getElementById('btn-sair-cliente').classList.toggle('hidden', this.role !== 'CLIENTE');
+                document.getElementById('btn-gestor').classList.toggle('hidden', this.role !== 'VISITANTE');
 
-            renderCard(c) {
-                document.getElementById('app').innerHTML = `
-                    <div class="space-y-6">
-                        <div class="bg-[#111] p-8 rounded-[3rem] border border-gray-900 shadow-2xl">
-                            <h4 class="text-2xl font-black italic uppercase text-[#fecb0a]">${c.name}</h4>
-                            <p class="text-gray-600 font-bold mb-6">${c.plate}</p>
-                            <div class="grid grid-cols-5 gap-3">
-                                ${Array.from({length: 10}).map((_, i) => `
-                                    <div class="aspect-square rounded-xl border-2 flex items-center justify-center ${i < c.stamps ? 'bg-[#fecb0a] border-white text-black' : 'bg-black border-gray-800 text-gray-900'}">
-                                        <i data-lucide="star" class="w-5 h-5 ${i < c.stamps ? 'fill-current' : ''}"></i>
+                if(this.role === 'VISITANTE') {
+                    main.innerHTML = `
+                        <div class="max-w-2xl mx-auto animate-fadeIn text-center space-y-12">
+                            <div class="space-y-1">
+                                <h2 class="text-7xl md:text-9xl font-black italic gold-glow leading-none">GUEDES</h2>
+                                <h3 class="text-3xl md:text-5xl font-light tracking-[0.3em] text-gray-500 uppercase">Fidelidade</h3>
+                            </div>
+                            <div class="bg-[#0a0a0a] p-10 rounded-[3rem] border border-gray-900 shadow-2xl space-y-6">
+                                <input id="input-placa" placeholder="DIGITE SUA PLACA" class="w-full bg-black border-2 border-gray-800 rounded-2xl py-6 text-center text-3xl font-black uppercase focus:border-[#fecb0a] outline-none">
+                                <button onclick="app.loginCliente()" class="w-full bg-[#fecb0a] text-black py-5 rounded-2xl font-black text-xl uppercase shadow-lg hover:bg-yellow-500 transition-all active:scale-95">Ver Meus Selos</button>
+                            </div>
+                        </div>`;
+                } 
+                else if(this.role === 'GESTOR') {
+                    main.innerHTML = `
+                        <div class="animate-fadeIn space-y-8 w-full">
+                            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                                <h2 class="text-4xl font-black uppercase italic tracking-tighter">Gestão de Dados</h2>
+                                <div class="flex gap-2">
+                                    <button onclick="app.exportDB()" class="bg-gray-800 text-white px-4 py-2 rounded-xl text-[10px] font-bold uppercase flex items-center gap-2"><i data-lucide="download" class="w-3 h-3"></i> Backup</button>
+                                    <button onclick="const n=prompt('Nome:'), p=prompt('Placa:'); if(n&&p){app.db.push({id:Date.now(), name:n, plate:p.toUpperCase(), stamps:0}); app.save(); app.render();}" class="bg-[#fecb0a] text-black px-6 py-3 rounded-2xl font-black text-xs uppercase">+ Novo Cadastro</button>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                ${this.db.map(c => `
+                                    <div class="bg-[#0a0a0a] p-6 rounded-3xl border border-gray-900 flex justify-between items-center">
+                                        <div class="text-left">
+                                            <h4 class="font-black text-lg leading-none">${c.name}</h4>
+                                            <span class="text-[#fecb0a] font-bold text-sm tracking-widest uppercase">${c.plate}</span>
+                                            <p class="text-[9px] text-gray-600 font-bold mt-2 uppercase">${c.stamps}/10 SELOS</p>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <button onclick="if(c.stamps<10){c.stamps++; app.save(); app.render();}" class="bg-green-600/10 text-green-500 border border-green-600/20 p-3 rounded-xl hover:bg-green-600 hover:text-white transition-all"><i data-lucide="plus" class="w-5 h-5"></i></button>
+                                            <button onclick="app.edit('${c.id}')" class="bg-blue-600/10 text-blue-400 border border-blue-600/20 p-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all"><i data-lucide="edit-3" class="w-5 h-5"></i></button>
+                                            <button onclick="if(confirm('Excluir?')){app.db=app.db.filter(x=>x.id!=${c.id}); app.save(); app.render();}" class="bg-red-600/10 text-red-500 border border-red-600/20 p-3 rounded-xl hover:bg-red-600 hover:text-white transition-all"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                                        </div>
                                     </div>
                                 `).join('')}
                             </div>
-                        </div>
-                        <button onclick="location.reload()" class="text-[10px] text-gray-700 font-bold uppercase tracking-widest">Voltar</button>
-                    </div>
-                `;
-                lucide.createIcons();
-            },
-
-            admin() {
-                const p = prompt("Senha:");
-                if(p === 'FideliGuedes26#') {
-                    this.renderAdmin();
+                            <button onclick="app.logout()" class="w-full py-10 text-gray-700 font-black uppercase text-[10px] tracking-[0.3em] hover:text-gray-400">Deslogar Gestor</button>
+                        </div>`;
                 }
-            },
-
-            renderAdmin() {
-                document.getElementById('app').innerHTML = `
-                    <div class="text-left space-y-4">
-                        <div class="flex justify-between items-center">
-                            <h2 class="text-xl font-black uppercase italic">Gestão</h2>
-                            <button onclick="app.add()" class="bg-[#fecb0a] text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase">+ Novo</button>
-                        </div>
-                        <div class="space-y-2">
-                            ${this.customers.map(c => `
-                                <div class="bg-[#111] p-4 rounded-2xl flex justify-between items-center border border-gray-900">
-                                    <div>
-                                        <div class="font-bold text-sm">${c.name}</div>
-                                        <div class="text-[#fecb0a] text-xs font-bold uppercase">${c.plate}</div>
-                                    </div>
-                                    <div class="flex gap-2">
-                                        <button onclick="app.plus('${c.id}')" class="bg-green-600/20 text-green-500 p-2 rounded-lg"><i data-lucide="plus" class="w-4 h-4"></i></button>
-                                        <button onclick="app.del('${c.id}')" class="bg-red-600/20 text-red-500 p-2 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                                    </div>
+                else if(this.role === 'CLIENTE') {
+                    const win = this.current.stamps === 10;
+                    main.innerHTML = `
+                        <div class="max-w-2xl mx-auto py-4 animate-fadeIn text-center space-y-8">
+                            <div class="bg-[#0a0a0a] p-10 rounded-[3.5rem] border ${win ? 'border-[#fecb0a] shadow-[0_0_50px_rgba(254,203,10,0.2)]' : 'border-gray-900'} space-y-8">
+                                <div class="space-y-1">
+                                    <p class="text-[10px] font-black text-gray-600 uppercase tracking-widest">Cartão de Fidelidade Digital</p>
+                                    <h3 class="text-4xl font-black italic uppercase">${this.current.name}</h3>
+                                    <p class="text-[#fecb0a] font-black tracking-[0.2em] text-xl">${this.current.plate}</p>
                                 </div>
-                            `).join('')}
-                        </div>
-                        <button onclick="location.reload()" class="w-full py-4 text-gray-800 font-bold text-[10px] uppercase">Sair</button>
-                    </div>
-                `;
+                                <div class="grid grid-cols-5 gap-3 max-w-sm mx-auto">
+                                    ${Array.from({length: 10}).map((_, i) => `
+                                        <div class="aspect-square rounded-2xl border-2 flex items-center justify-center transition-all duration-700 ${i < this.current.stamps ? 'bg-[#fecb0a] border-white text-black scale-105 shadow-[0_0_15px_rgba(254,203,10,0.5)]' : 'bg-black border-gray-800 text-gray-900'}">
+                                            <i data-lucide="star" class="w-6 h-6 ${i < this.current.stamps ? 'fill-current' : ''}"></i>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                ${win ? `<h4 class="text-white font-black text-xl uppercase italic animate-bounce pt-4">PARABÉNS! VOCÊ GANHOU UMA GERAL COMPLETA!</h4>` : `<p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Faltam <span class="text-[#fecb0a]">${10 - this.current.stamps} selos</span> para o prêmio!</p>`}
+                            </div>
+                        </div>`;
+                }
                 lucide.createIcons();
             },
 
-            add() {
-                const n = prompt("Nome:");
-                const p = prompt("Placa:").toUpperCase();
-                if(n && p) {
-                    this.customers.push({id: Date.now().toString(), name: n, plate: p, stamps: 0});
-                    this.save(); this.renderAdmin();
-                }
+            edit(id) {
+                const c = this.db.find(x => x.id == id);
+                const n = prompt("Novo Nome:", c.name);
+                const p = prompt("Nova Placa:", c.plate);
+                if(n && p) { c.name = n; c.plate = p.toUpperCase(); this.save(); this.render(); }
             },
 
-            plus(id) {
-                const c = this.customers.find(x => x.id === id);
-                if(c.stamps < 10) c.stamps++;
-                this.save(); this.renderAdmin();
-            },
-
-            del(id) {
-                if(confirm("Excluir?")) {
-                    this.customers = this.customers.filter(x => x.id !== id);
-                    this.save(); this.renderAdmin();
-                }
-            },
-
-            save() { localStorage.setItem('guedes_db', JSON.stringify(this.customers)); }
+            exportDB() {
+                const data = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.db));
+                const link = document.createElement('a');
+                link.setAttribute("href", data);
+                link.setAttribute("download", "backup_guedes.json");
+                link.click();
+            }
         };
-
         app.init();
     </script>
 </body>
