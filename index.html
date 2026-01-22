@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -8,6 +8,28 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCcpjJ9WFwKmSDadxnIC83sn8SI2BfiPxE",
+            authDomain: "guedes-fidelidade.firebaseapp.com",
+            projectId: "guedes-fidelidade",
+            storageBucket: "guedes-fidelidade.firebasestorage.app",
+            messagingSenderId: "342813979449",
+            appId: "1:342813979449:web:aef8f1fdb334a72dc8eee8",
+            measurementId: "G-QRHZCYVNP0"
+        };
+
+        const appFirebase = initializeApp(firebaseConfig);
+        const db = getFirestore(appFirebase);
+        const clientesRef = collection(db, "clientes");
+
+        window.firebaseAPI = { addDoc, clientesRef, onSnapshot, doc, updateDoc, deleteDoc, db, query, orderBy };
+    </script>
+
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #000; color: #fff; -webkit-tap-highlight-color: transparent; }
         .gold-glow { text-shadow: 0 0 25px rgba(254, 203, 10, 0.5); }
@@ -45,13 +67,21 @@
 
     <script>
         const app = {
-            db: JSON.parse(localStorage.getItem('guedes_pro_v5') || '[]'),
+            db: [],
             role: 'HOME',
             current: null,
 
-            init() { this.render(); },
-            save() { localStorage.setItem('guedes_pro_v5', JSON.stringify(this.db)); },
-            logout() { this.role = 'HOME'; this.current = null; this.render(); },
+            init() {
+                if (!window.firebaseAPI) {
+                    setTimeout(() => this.init(), 500);
+                    return;
+                }
+                const q = window.firebaseAPI.query(window.firebaseAPI.clientesRef, window.firebaseAPI.orderBy("name", "asc"));
+                window.firebaseAPI.onSnapshot(q, (snapshot) => {
+                    this.db = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    this.render();
+                });
+            },
 
             render() {
                 const content = document.getElementById('app-content');
@@ -108,16 +138,9 @@
                 else if (this.role === 'GESTOR') {
                     content.innerHTML = `
                         <div class="space-y-6 pb-24">
-                            <div class="flex flex-col gap-4">
-                                <div class="flex justify-between items-center">
-                                    <h2 class="text-xl font-black uppercase italic italic">Gestão Guedes</h2>
-                                    <button onclick="app.newClient()" class="bg-[#fecb0a] text-black px-4 py-2 rounded-lg font-black text-[10px] uppercase">+ Novo</button>
-                                </div>
-                                <div class="flex gap-2 overflow-x-auto pb-2">
-                                    <button onclick="app.exportCSV()" class="bg-white/5 border border-white/10 px-3 py-2 rounded-lg text-[9px] font-bold uppercase flex items-center gap-1 shrink-0"><i data-lucide="download" class="w-3 h-3"></i> CSV</button>
-                                    <button onclick="app.backupData()" class="bg-white/5 border border-white/10 px-3 py-2 rounded-lg text-[9px] font-bold uppercase flex items-center gap-1 shrink-0"><i data-lucide="save" class="w-3 h-3"></i> Backup</button>
-                                    <button onclick="app.importData()" class="bg-white/5 border border-white/10 px-3 py-2 rounded-lg text-[9px] font-bold uppercase flex items-center gap-1 shrink-0"><i data-lucide="upload" class="w-3 h-3"></i> Importar</button>
-                                </div>
+                            <div class="flex justify-between items-center">
+                                <h2 class="text-xl font-black uppercase italic">Gestão Guedes</h2>
+                                <button onclick="app.newClient()" class="bg-[#fecb0a] text-black px-4 py-2 rounded-lg font-black text-[10px] uppercase">+ Novo</button>
                             </div>
                             <div class="grid gap-4">
                                 ${this.db.map(c => `
@@ -131,8 +154,7 @@
                                                 </div>
                                             </div>
                                             <div class="flex gap-2">
-                                                <button onclick="app.addStamp('${c.id}')" class="bg-green-600/20 text-green-500 p-2 rounded-lg"><i data-lucide="${c.stamps === 10 ? 'trophy' : 'plus'}" class="w-4 h-4"></i></button>
-                                                <button onclick="app.editClient('${c.id}')" class="bg-blue-600/20 text-blue-500 p-2 rounded-lg"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                                                <button onclick="app.addStamp('${c.id}', ${c.stamps})" class="bg-green-600/20 text-green-500 p-2 rounded-lg"><i data-lucide="${c.stamps >= 10 ? 'trophy' : 'plus'}" class="w-4 h-4"></i></button>
                                                 <button onclick="app.delClient('${c.id}')" class="bg-red-600/20 text-red-500 p-2 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                                             </div>
                                         </div>
@@ -142,31 +164,6 @@
                         </div>`;
                 }
                 lucide.createIcons();
-            },
-
-            backupData() {
-                const data = JSON.stringify(this.db);
-                const blob = new Blob([data], {type: "application/json"});
-                const link = document.createElement("a");
-                link.href = URL.createObjectURL(blob);
-                link.download = `backup_guedes_${new Date().toLocaleDateString()}.json`;
-                link.click();
-            },
-
-            importData() {
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.onchange = e => {
-                    const file = e.target.files[0];
-                    const reader = new FileReader();
-                    reader.onload = event => {
-                        this.db = JSON.parse(event.target.result);
-                        this.save(); this.render();
-                        alert("Dados importados com sucesso!");
-                    };
-                    reader.readAsText(file);
-                };
-                input.click();
             },
 
             getIncentive(s) {
@@ -184,57 +181,37 @@
                 else alert("Placa não encontrada.");
             },
 
-            adminLogin() {
-                if(prompt("Senha:") === 'FideliGuedes26#') { this.role = 'GESTOR'; this.render(); }
-            },
+            adminLogin() { if(prompt("Senha:") === 'FideliGuedes26#') { this.role = 'GESTOR'; this.render(); } },
+            logout() { this.role = 'HOME'; this.current = null; this.render(); },
 
-            newClient() {
+            async newClient() {
                 const n = prompt("Nome:");
                 const p = prompt("Placa:").toUpperCase();
-                const m = prompt("Modelo do Carro:");
-                const d = prompt("Data Nascimento (DD/MM):");
-                const t = prompt("Time do Coração:");
-                const k = prompt("Como conheceu a Guedes?");
+                const m = prompt("Modelo:");
                 if(n && p) {
-                    this.db.push({id: Date.now().toString(), name: n, plate: p, modelo: m, nascimento: d, time: t, conheceu: k, stamps: 0, goldCount: 0});
-                    this.save(); this.render();
+                    await window.firebaseAPI.addDoc(window.firebaseAPI.clientesRef, {
+                        name: n, plate: p, modelo: m, stamps: 0, goldCount: 0, createdAt: new Date()
+                    });
                 }
             },
 
-            editClient(id) {
-                const c = this.db.find(x => x.id === id);
-                c.name = prompt("Nome:", c.name) || c.name;
-                c.plate = prompt("Placa:", c.plate).toUpperCase() || c.plate;
-                c.modelo = prompt("Modelo:", c.modelo) || c.modelo;
-                c.nascimento = prompt("Nascimento:", c.nascimento) || c.nascimento;
-                this.save(); this.render();
-            },
-
-            addStamp(id) {
-                const c = this.db.find(x => x.id === id);
-                if(c.stamps === 10) {
-                    if(confirm("Confirmar entrega do Prêmio GOLD?")) {
-                        c.stamps = 0; c.goldCount++;
-                        this.save(); this.render();
+            async addStamp(id, current) {
+                const ref = window.firebaseAPI.doc(window.firebaseAPI.db, "clientes", id);
+                if(current >= 10) {
+                    if(confirm("Zerar selos e somar 1 Prêmio Gold?")) {
+                        const c = this.db.find(x => x.id === id);
+                        await window.firebaseAPI.updateDoc(ref, { stamps: 0, goldCount: (c.goldCount || 0) + 1 });
                     }
                 } else {
-                    c.stamps++; this.save(); this.render();
-                    if(c.stamps === 10) confetti();
+                    await window.firebaseAPI.updateDoc(ref, { stamps: current + 1 });
+                    if(current + 1 === 10) confetti();
                 }
             },
 
-            delClient(id) {
-                if(confirm("Excluir definitivamente?")) { this.db = this.db.filter(x => x.id !== id); this.save(); this.render(); }
-            },
-
-            exportCSV() {
-                const headers = ["Nome", "Placa", "Modelo", "Golds"];
-                const rows = this.db.map(c => [c.name, c.plate, c.modelo, c.goldCount]);
-                let csv = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(r => r.join(",")).join("\n");
-                const link = document.createElement("a");
-                link.setAttribute("href", encodeURI(csv));
-                link.setAttribute("download", "clientes_guedes.csv");
-                link.click();
+            async delClient(id) {
+                if(confirm("Excluir?")) {
+                    await window.firebaseAPI.deleteDoc(window.firebaseAPI.doc(window.firebaseAPI.db, "clientes", id));
+                }
             }
         };
         app.init();
