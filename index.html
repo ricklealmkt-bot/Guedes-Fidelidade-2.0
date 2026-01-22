@@ -1,35 +1,135 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guedes Fidelidade 2.0</title>
+    <title>Guedes Fidelidade</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #000; color: #fff; scroll-behavior: smooth; }
-        .animate-fadeIn { animation: fadeIn 0.5s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .gold-shadow { box-shadow: 0 0 20px rgba(254, 203, 10, 0.4); }
-        .hide-scroll::-webkit-scrollbar { display: none; }
-        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+        body { background-color: #000; color: #fff; font-family: sans-serif; }
+        .gold-glow { text-shadow: 0 0 20px rgba(254, 203, 10, 0.5); }
     </style>
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.2.3",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.38.0",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
-  }
-}
-</script>
 </head>
-<body class="min-h-screen flex flex-col">
-    <div id="root"></div>
-    <script type="module" src="index.tsx"></script>
+<body class="min-h-screen flex flex-col items-center justify-center p-4 text-center">
+
+    <div id="app" class="w-full max-w-md space-y-12">
+        <div class="animate-pulse text-gray-700 font-bold uppercase tracking-widest">Carregando Sistema...</div>
+    </div>
+
+    <script>
+        const app = {
+            customers: JSON.parse(localStorage.getItem('guedes_db') || '[]'),
+            
+            init() {
+                this.renderLogin();
+                // Força a atualização dos ícones após o render
+                setTimeout(() => lucide.createIcons(), 100);
+            },
+
+            renderLogin() {
+                document.getElementById('app').innerHTML = `
+                    <div class="space-y-8">
+                        <div class="space-y-2">
+                            <h2 class="text-6xl font-black italic gold-glow tracking-tighter">GUEDES</h2>
+                            <h3 class="text-2xl font-light tracking-[0.3em] text-gray-500 uppercase">Fidelidade</h3>
+                        </div>
+                        <div class="bg-[#111] p-8 rounded-[2.5rem] border border-gray-900 shadow-2xl">
+                            <input id="plate-in" placeholder="DIGITE SUA PLACA" class="w-full bg-black border-2 border-gray-800 rounded-2xl py-5 text-center text-2xl font-black uppercase focus:border-[#fecb0a] outline-none mb-4 text-white">
+                            <button onclick="app.checkClient()" class="w-full bg-[#fecb0a] text-black py-5 rounded-2xl font-black text-lg uppercase shadow-lg active:scale-95 transition-all">Ver Meus Selos</button>
+                        </div>
+                        <button onclick="app.admin()" class="text-[10px] text-gray-700 font-bold tracking-widest uppercase hover:text-gray-400">Acesso Gestor</button>
+                    </div>
+                `;
+            },
+
+            checkClient() {
+                const val = document.getElementById('plate-in').value.trim().toUpperCase();
+                const client = this.customers.find(c => c.plate === val);
+                if(client) this.renderCard(client);
+                else alert("Placa não encontrada!");
+            },
+
+            renderCard(c) {
+                document.getElementById('app').innerHTML = `
+                    <div class="space-y-6">
+                        <div class="bg-[#111] p-8 rounded-[3rem] border border-gray-900 shadow-2xl">
+                            <h4 class="text-2xl font-black italic uppercase text-[#fecb0a]">${c.name}</h4>
+                            <p class="text-gray-600 font-bold mb-6">${c.plate}</p>
+                            <div class="grid grid-cols-5 gap-3">
+                                ${Array.from({length: 10}).map((_, i) => `
+                                    <div class="aspect-square rounded-xl border-2 flex items-center justify-center ${i < c.stamps ? 'bg-[#fecb0a] border-white text-black' : 'bg-black border-gray-800 text-gray-900'}">
+                                        <i data-lucide="star" class="w-5 h-5 ${i < c.stamps ? 'fill-current' : ''}"></i>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <button onclick="location.reload()" class="text-[10px] text-gray-700 font-bold uppercase tracking-widest">Voltar</button>
+                    </div>
+                `;
+                lucide.createIcons();
+            },
+
+            admin() {
+                const p = prompt("Senha:");
+                if(p === 'FideliGuedes26#') {
+                    this.renderAdmin();
+                }
+            },
+
+            renderAdmin() {
+                document.getElementById('app').innerHTML = `
+                    <div class="text-left space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-xl font-black uppercase italic">Gestão</h2>
+                            <button onclick="app.add()" class="bg-[#fecb0a] text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase">+ Novo</button>
+                        </div>
+                        <div class="space-y-2">
+                            ${this.customers.map(c => `
+                                <div class="bg-[#111] p-4 rounded-2xl flex justify-between items-center border border-gray-900">
+                                    <div>
+                                        <div class="font-bold text-sm">${c.name}</div>
+                                        <div class="text-[#fecb0a] text-xs font-bold uppercase">${c.plate}</div>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button onclick="app.plus('${c.id}')" class="bg-green-600/20 text-green-500 p-2 rounded-lg"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                                        <button onclick="app.del('${c.id}')" class="bg-red-600/20 text-red-500 p-2 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button onclick="location.reload()" class="w-full py-4 text-gray-800 font-bold text-[10px] uppercase">Sair</button>
+                    </div>
+                `;
+                lucide.createIcons();
+            },
+
+            add() {
+                const n = prompt("Nome:");
+                const p = prompt("Placa:").toUpperCase();
+                if(n && p) {
+                    this.customers.push({id: Date.now().toString(), name: n, plate: p, stamps: 0});
+                    this.save(); this.renderAdmin();
+                }
+            },
+
+            plus(id) {
+                const c = this.customers.find(x => x.id === id);
+                if(c.stamps < 10) c.stamps++;
+                this.save(); this.renderAdmin();
+            },
+
+            del(id) {
+                if(confirm("Excluir?")) {
+                    this.customers = this.customers.filter(x => x.id !== id);
+                    this.save(); this.renderAdmin();
+                }
+            },
+
+            save() { localStorage.setItem('guedes_db', JSON.stringify(this.customers)); }
+        };
+
+        app.init();
+    </script>
 </body>
 </html>
