@@ -119,30 +119,42 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ customers, setCusto
         return c;
       });
       setCustomers(updatedCustomers);
-      alert("Prêmio resgatado com sucesso! Contagem reiniciada.");
+      alert("Prêmio resgatado com sucesso! Ciclo de fidelidade reiniciado.");
     }
   };
 
   const handleDeleteCustomer = (id: string) => {
-    if (window.confirm("Deseja realmente excluir este cliente permanentemente? Todos os selos e histórico serão perdidos.")) {
-      setCustomers(customers.filter(c => c.id !== id));
+    if (window.confirm("ATENÇÃO: Deseja realmente excluir este cliente permanentemente? Todos os registros e selos serão removidos da base de dados.")) {
+      const updatedList = customers.filter(c => c.id !== id);
+      setCustomers(updatedList);
     }
   };
 
   const handleDeleteService = (customerId: string, serviceId: string) => {
-    if (window.confirm("Deseja realmente excluir este registro do histórico? Isso não alterará automaticamente a contagem de selos atual, apenas removerá o registro do histórico.")) {
+    if (window.confirm("Deseja realmente excluir este registro do histórico? A contagem de selos será decrementada (exceto se for um resgate).")) {
       const updatedCustomers = customers.map(c => {
         if (c.id === customerId) {
+          const serviceToDelete = c.services.find(s => s.id === serviceId);
+          const isRedemption = serviceToDelete?.type.includes("RESGATE");
+          
+          let newStamps = c.stamps;
+          // Se não for um resgate, diminui um selo se houver selos no cartão
+          if (!isRedemption && newStamps > 0) {
+            newStamps -= 1;
+          }
+
           return {
             ...c,
             services: c.services.filter(s => s.id !== serviceId),
+            stamps: newStamps,
             totalServicesCount: Math.max(0, (c.totalServicesCount || 1) - 1)
           };
         }
         return c;
       });
       setCustomers(updatedCustomers);
-      // Atualizar o selectedCustomer se o modal de histórico estiver aberto
+      
+      // Atualizar o selectedCustomer para refletir a mudança no modal de histórico aberto
       if (selectedCustomer && selectedCustomer.id === customerId) {
         const updated = updatedCustomers.find(u => u.id === customerId);
         if (updated) setSelectedCustomer(updated);
@@ -190,19 +202,19 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ customers, setCusto
         <div className="flex flex-wrap justify-center gap-2">
           <button 
             onClick={() => { setEditingCustomer(null); setIsCustomerModalOpen(true); }}
-            className="flex items-center gap-2 bg-[#fecb0a] text-black px-6 py-2 rounded-full font-bold text-sm hover:opacity-90"
+            className="flex items-center gap-2 bg-[#fecb0a] text-black px-6 py-2 rounded-full font-bold text-sm hover:opacity-90 transition-all"
           >
             <UserPlus size={18} /> NOVO CLIENTE
           </button>
           <button 
             onClick={exportData}
-            className="flex items-center gap-2 bg-gray-900 text-gray-300 border border-gray-800 px-4 py-2 rounded-full font-bold text-sm hover:bg-gray-800"
+            className="flex items-center gap-2 bg-gray-900 text-gray-300 border border-gray-800 px-4 py-2 rounded-full font-bold text-sm hover:bg-gray-800 transition-all"
           >
             <FileDown size={18} /> BACKUP
           </button>
           <button 
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-2 bg-gray-900 text-gray-300 border border-gray-800 px-4 py-2 rounded-full font-bold text-sm hover:bg-gray-800"
+            className="flex items-center gap-2 bg-gray-900 text-gray-300 border border-gray-800 px-4 py-2 rounded-full font-bold text-sm hover:bg-gray-800 transition-all"
           >
             <FileUp size={18} /> IMPORTAR
           </button>
@@ -226,7 +238,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ customers, setCusto
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Buscar por nome ou placa..."
-          className="w-full bg-[#111] border border-gray-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:border-[#fecb0a] transition-all"
+          className="w-full bg-[#111] border border-gray-800 rounded-2xl py-4 pl-12 pr-4 font-bold outline-none focus:border-[#fecb0a] transition-all text-white"
         />
       </div>
 
@@ -246,7 +258,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ customers, setCusto
             <tbody className="divide-y divide-gray-900">
               {filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-600 italic">Nenhum cliente cadastrado.</td>
+                  <td colSpan={5} className="px-6 py-12 text-center text-gray-600 italic">Nenhum cliente cadastrado ou encontrado.</td>
                 </tr>
               ) : (
                 filteredCustomers.map(customer => (
@@ -255,8 +267,8 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ customers, setCusto
                       <div className="flex items-center gap-3">
                          {customer.stamps === 10 && <Gift size={18} className="text-[#fecb0a] animate-bounce" />}
                          <div>
-                            <p className="font-bold">{customer.name}</p>
-                            <p className="text-xs text-[#fecb0a] font-black">{customer.plate} - {customer.vehicleModel}</p>
+                            <p className="font-bold text-white">{customer.name}</p>
+                            <p className="text-xs text-[#fecb0a] font-black uppercase">{customer.plate} - {customer.vehicleModel}</p>
                          </div>
                       </div>
                     </td>
@@ -277,7 +289,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ customers, setCusto
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                      <div className="flex justify-end gap-1.5 opacity-60 group-hover:opacity-100 transition-all">
                         {customer.stamps === 10 ? (
                           <button 
                             onClick={() => handleRedeemPrize(customer)}
@@ -311,7 +323,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ customers, setCusto
                         </button>
                         <button 
                           onClick={() => handleDeleteCustomer(customer.id)}
-                          title="Excluir Cliente"
+                          title="Excluir Cliente Permanentemente"
                           className="p-2.5 bg-red-600/10 text-red-500 hover:bg-red-600/20 rounded-xl transition-all border border-red-600/10"
                         >
                           <Trash2 size={20} />
@@ -366,7 +378,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ customers, setCusto
                 <select 
                   value={newCustomer.referralSource} 
                   onChange={e => setNewCustomer({...newCustomer, referralSource: e.target.value})} 
-                  className="w-full bg-black border border-gray-800 p-3 rounded-xl focus:border-[#fecb0a] outline-none text-white"
+                  className="w-full bg-black border border-gray-800 p-3 rounded-xl focus:border-[#fecb0a] outline-none text-white appearance-none"
                 >
                   <option value="">Selecione...</option>
                   <option value="Instagram">Instagram</option>
@@ -410,7 +422,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ customers, setCusto
                         <Calendar size={18} />
                       </div>
                       <div>
-                        <p className={`font-bold text-sm ${service.type.includes('PRÊMIO') ? 'text-[#fecb0a]' : 'text-white'}`}>
+                        <p className={`font-bold text-sm ${service.type.includes('PRÊMIO') || service.type.includes('RESGATE') ? 'text-[#fecb0a]' : 'text-white'}`}>
                           {service.type}
                         </p>
                         <p className="text-[10px] text-gray-600 font-bold uppercase">
@@ -427,7 +439,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ customers, setCusto
                       <button 
                         onClick={() => handleDeleteService(selectedCustomer.id, service.id)}
                         className="p-2 text-gray-700 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
-                        title="Excluir Registro"
+                        title="Excluir Registro permanentemente"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -455,7 +467,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ customers, setCusto
                  <select 
                     value={newService.type}
                     onChange={e => setNewService({...newService, type: e.target.value})}
-                    className="w-full bg-black border border-gray-800 p-3 rounded-xl focus:border-[#fecb0a] outline-none text-white"
+                    className="w-full bg-black border border-gray-800 p-3 rounded-xl focus:border-[#fecb0a] outline-none text-white appearance-none"
                  >
                    {SERVICE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                  </select>
@@ -477,7 +489,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ customers, setCusto
             <div className="flex gap-2">
               <button 
                 onClick={() => { setIsServiceModalOpen(false); setSelectedCustomer(null); }}
-                className="flex-1 border border-gray-800 text-gray-500 py-3 rounded-xl font-bold hover:text-white transition-colors"
+                className="flex-1 border border-gray-800 text-gray-500 py-3 rounded-xl font-bold hover:text-white transition-all"
               >
                 CANCELAR
               </button>
