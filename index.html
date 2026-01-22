@@ -1,35 +1,209 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guedes Fidelidade 2.0</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GUEDES FIDELIDADE</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #000; color: #fff; scroll-behavior: smooth; }
-        .animate-fadeIn { animation: fadeIn 0.5s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .gold-shadow { box-shadow: 0 0 20px rgba(254, 203, 10, 0.4); }
-        .hide-scroll::-webkit-scrollbar { display: none; }
-        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+        body { font-family: 'Inter', sans-serif; background-color: #000; color: #fff; -webkit-tap-highlight-color: transparent; }
+        .gold-glow { text-shadow: 0 0 30px rgba(254, 203, 10, 0.6); }
+        .card-glass { background: rgba(10, 10, 10, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
+        .btn-primary { background-color: #fecb0a; color: #000; font-weight: 900; transition: all 0.2s; }
+        .btn-primary:active { transform: scale(0.95); }
+        input::placeholder { color: #444; }
     </style>
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.2.3",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.38.0",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
-  }
-}
-</script>
 </head>
 <body class="min-h-screen flex flex-col">
-    <div id="root"></div>
-    <script type="module" src="index.tsx"></script>
+
+    <header class="border-b border-gray-900 p-4 sticky top-0 z-50 bg-black/90 backdrop-blur-md">
+        <div class="container mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-[#fecb0a] p-2 rounded-xl text-black shadow-lg shadow-[#fecb0a]/20">
+                    <i data-lucide="car" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-sm font-black uppercase tracking-tighter leading-none">Guedes Lava Jato</h1>
+                    <p class="text-[8px] text-gray-500 uppercase tracking-widest font-bold">Estética Automotiva</p>
+                </div>
+            </div>
+            <div id="nav-btn"></div>
+        </div>
+    </header>
+
+    <main id="app-content" class="flex-grow flex flex-col container mx-auto px-4 py-8"></main>
+
+    <footer class="border-t border-gray-900 bg-black py-10">
+        <div class="container mx-auto px-6 text-center space-y-6">
+            <div id="wa-section" class="hidden animate-bounce">
+                <a href="https://wa.me/5531982077291" class="inline-flex items-center gap-3 bg-[#25d366] text-black px-8 py-4 rounded-full font-black text-xs uppercase shadow-xl">
+                    <i data-lucide="message-circle" class="w-5 h-5"></i> Agende seu serviço
+                </a>
+            </div>
+            <div class="opacity-30 space-y-1">
+                <p class="text-[10px] font-bold uppercase tracking-widest">Rua Batista Carneiro, 113 - Salgado Filho – BH/MG</p>
+                <p class="text-[8px]">© 2026 GUEDES FIDELIDADE DIGITAL • BH/MG</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const app = {
+            db: JSON.parse(localStorage.getItem('guedes_pro_v3') || '[]'),
+            role: 'HOME',
+            current: null,
+            tips: [
+                "O polimento protege o verniz contra os raios UV e oxidação.",
+                "Lavar o motor regularmente evita o ressecamento de mangueiras.",
+                "Mantenha seu interior limpo para valorizar o ticket de revenda."
+            ],
+
+            init() { this.render(); },
+            save() { localStorage.setItem('guedes_pro_v3', JSON.stringify(this.db)); },
+            logout() { this.role = 'HOME'; this.current = null; this.render(); },
+
+            render() {
+                const content = document.getElementById('app-content');
+                const nav = document.getElementById('nav-btn');
+                const wa = document.getElementById('wa-section');
+
+                wa.classList.toggle('hidden', this.role === 'HOME');
+                nav.innerHTML = this.role === 'HOME' ? 
+                    `<button onclick="app.adminLogin()" class="text-[10px] font-black uppercase text-gray-600 border border-gray-800 px-4 py-2 rounded-lg">Gestor</button>` :
+                    `<button onclick="app.logout()" class="text-[10px] font-black uppercase bg-red-900/20 text-red-500 px-4 py-2 rounded-lg">Sair</button>`;
+
+                if (this.role === 'HOME') {
+                    content.innerHTML = `
+                        <div class="flex-grow flex flex-col justify-center items-center space-y-16 py-10">
+                            <div class="text-center">
+                                <h2 class="text-8xl md:text-9xl font-black italic gold-glow leading-none uppercase tracking-tighter">GUEDES</h2>
+                                <p class="text-2xl font-light tracking-[0.5em] text-gray-600 uppercase">Fidelidade</p>
+                            </div>
+                            <div class="w-full max-w-sm card-glass p-10 rounded-[3rem] shadow-2xl space-y-8">
+                                <input id="placa-in" placeholder="PLACA" class="w-full bg-transparent border-b-2 border-gray-900 py-6 text-center text-4xl font-black uppercase outline-none focus:border-[#fecb0a] text-white">
+                                <button onclick="app.check()" class="w-full btn-primary h-20 rounded-[2rem] text-xl uppercase shadow-lg shadow-[#fecb0a]/20">Ver Selos</button>
+                            </div>
+                            <div class="max-w-xs text-center border border-blue-900/20 bg-blue-900/5 p-4 rounded-2xl">
+                                <p class="text-[10px] text-blue-400 font-black uppercase mb-1">Dica do Guedes ✨</p>
+                                <p class="text-xs italic text-gray-500">"${this.tips[Math.floor(Math.random()*this.tips.length)]}"</p>
+                            </div>
+                        </div>`;
+                } 
+                else if (this.role === 'CLIENTE') {
+                    const today = new Date();
+                    const niver = new Date(this.current.nascimento);
+                    const isNiver = today.getDate() === niver.getDate() && today.getMonth() === niver.getMonth();
+
+                    content.innerHTML = `
+                        <div class="animate-fadeIn space-y-8 max-w-lg mx-auto w-full">
+                            ${isNiver ? `<div class="bg-yellow-500 text-black p-4 rounded-2xl font-black text-center text-xs uppercase italic">🎂 Parabéns! Presente especial para você hoje!</div>` : ''}
+                            <div class="card-glass p-10 rounded-[3.5rem] text-center space-y-10">
+                                <div>
+                                    <h3 class="text-5xl font-black italic uppercase leading-none mb-2">${this.current.name}</h3>
+                                    <p class="text-[#fecb0a] font-bold tracking-widest text-xl uppercase">${this.current.plate}</p>
+                                    <p class="text-[10px] text-gray-600 font-bold uppercase mt-2">${this.current.modelo} • ${this.current.time}</p>
+                                </div>
+                                <div class="grid grid-cols-5 gap-4">
+                                    ${Array.from({length: 10}).map((_, i) => `
+                                        <div class="aspect-square rounded-2xl border-2 flex items-center justify-center transition-all ${i < this.current.stamps ? 'bg-[#fecb0a] border-white text-black scale-110 shadow-lg' : 'bg-black border-gray-900 text-gray-800'}">
+                                            <i data-lucide="star" class="w-6 h-6 ${i < this.current.stamps ? 'fill-current' : ''}"></i>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                <div class="bg-white/5 p-4 rounded-2xl">
+                                    <p class="text-xs font-black text-yellow-500 uppercase tracking-widest italic">🏆 Histórico Gold: ${this.current.goldCount || 0} Geral Completa</p>
+                                </div>
+                            </div>
+                        </div>`;
+                }
+                else if (this.role === 'GESTOR') {
+                    content.innerHTML = `
+                        <div class="space-y-8 animate-fadeIn pb-32">
+                            <div class="flex flex-col gap-4 md:flex-row justify-between items-center">
+                                <h2 class="text-3xl font-black uppercase italic">Painel Gestor</h2>
+                                <div class="flex gap-2">
+                                    <button onclick="app.exportCSV()" class="bg-white/5 border border-white/10 text-white px-5 py-3 rounded-xl font-bold text-[10px] uppercase flex items-center gap-2"><i data-lucide="download" class="w-4 h-4"></i> Exportar</button>
+                                    <button onclick="app.newClient()" class="bg-[#fecb0a] text-black px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest">+ Novo Cliente</button>
+                                </div>
+                            </div>
+                            <div class="grid gap-4">
+                                ${this.db.map(c => `
+                                    <div class="card-glass p-6 rounded-[2.5rem] flex flex-col md:flex-row justify-between items-center gap-6">
+                                        <div class="text-center md:text-left">
+                                            <p class="text-xl font-black uppercase leading-none">${c.name}</p>
+                                            <p class="text-[#fecb0a] font-bold text-sm tracking-widest">${c.plate}</p>
+                                            <p class="text-[9px] text-gray-500 uppercase font-bold mt-1">${c.modelo} • ${c.whatsapp}</p>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <button onclick="app.addStamp('${c.id}')" class="bg-green-600/20 text-green-500 p-4 rounded-2xl"><i data-lucide="${c.stamps === 10 ? 'trophy' : 'plus'}"></i></button>
+                                            <button onclick="app.delClient('${c.id}')" class="bg-red-600/20 text-red-500 p-4 rounded-2xl"><i data-lucide="trash-2"></i></button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>`;
+                }
+                lucide.createIcons();
+            },
+
+            exportCSV() {
+                if (this.db.length === 0) return alert("Base vazia!");
+                const headers = ["Nome", "Placa", "Modelo", "WhatsApp", "Nascimento", "Time", "Selos", "Golds"];
+                const rows = this.db.map(c => [c.name, c.plate, c.modelo, c.whatsapp, c.nascimento, c.time, c.stamps, c.goldCount || 0]);
+                let csv = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(r => r.join(",")).join("\n");
+                const link = document.createElement("a");
+                link.setAttribute("href", encodeURI(csv));
+                link.setAttribute("download", "Guedes_Fidelidade_Clientes.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            },
+
+            check() {
+                const p = document.getElementById('placa-in').value.trim().toUpperCase();
+                const c = this.db.find(x => x.plate === p);
+                if(c) { this.role = 'CLIENTE'; this.current = c; this.render(); }
+                else alert("Placa não localizada.");
+            },
+
+            adminLogin() {
+                if(prompt("Senha:") === 'FideliGuedes26#') { this.role = 'GESTOR'; this.render(); }
+            },
+
+            newClient() {
+                const n = prompt("Nome:");
+                const p = prompt("Placa:").toUpperCase();
+                const m = prompt("Modelo do Veículo:");
+                const w = prompt("WhatsApp:");
+                const d = prompt("Nascimento (DD/MM):");
+                const t = prompt("Time:");
+                if(n && p) {
+                    this.db.push({id: Date.now().toString(), name: n, plate: p, modelo: m, whatsapp: w, nascimento: d, time: t, stamps: 0, goldCount: 0});
+                    this.save(); this.render();
+                }
+            },
+
+            addStamp(id) {
+                const c = this.db.find(x => x.id === id);
+                if(c.stamps === 10) {
+                    if(confirm("Confirmar entrega de Prêmio GOLD?")) {
+                        c.stamps = 0; c.goldCount = (c.goldCount || 0) + 1;
+                        this.save(); this.render();
+                    }
+                } else {
+                    c.stamps++; this.save(); this.render();
+                    if(c.stamps === 10) confetti();
+                }
+            },
+
+            delClient(id) {
+                if(confirm("Excluir cliente?")) { this.db = this.db.filter(x => x.id !== id); this.save(); this.render(); }
+            }
+        };
+        app.init();
+    </script>
 </body>
 </html>
