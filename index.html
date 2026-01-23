@@ -139,6 +139,7 @@
                     alert('NÍVEL GOLD! Cliente ganhou uma Geral Completa!');
                 }
                 await updateDoc(docRef, updateData);
+                alert('Serviço lançado e ponto adicionado!');
             },
 
             exportExcel() {
@@ -161,14 +162,16 @@
                 const content = document.getElementById('app-content');
                 const nav = document.getElementById('nav-btn');
                 const footerCta = document.getElementById('footer-cta');
-                const whatsApp = "https://wa.me/55319XXXXXXXX";
+                const whatsApp = "https://wa.me/5531982077291?text=Olá! Gostaria de agendar um serviço na Guedes Lava Jato.";
 
                 nav.innerHTML = this.role === 'HOME' 
                     ? `<button onclick="app.adminLogin()" class="text-[10px] font-black uppercase text-gray-700 tracking-widest">Acesso Restrito</button>`
                     : `<button onclick="app.role='HOME';app.render()" class="bg-red-900/20 text-red-500 px-3 py-1.5 rounded-lg text-[10px] font-black">SAIR</button>`;
 
                 footerCta.innerHTML = (this.role === 'HOME' || this.current) 
-                    ? `<a href="${whatsApp}" target="_blank" class="inline-flex items-center gap-2 bg-green-600 text-white px-8 py-4 rounded-full text-[11px] font-black uppercase tracking-widest shadow-xl shadow-green-500/20"><i data-lucide="calendar" class="w-4 h-4"></i> Agende seu Serviço</a>` 
+                    ? `<a href="${whatsApp}" target="_blank" class="inline-flex items-center gap-3 bg-[#25D366] text-white px-8 py-4 rounded-full text-[12px] font-black uppercase tracking-widest shadow-xl shadow-green-500/30 transition-transform active:scale-95">
+                        <i data-lucide="message-circle" class="w-5 h-5"></i> Agende seu Serviço
+                       </a>` 
                     : '';
 
                 if(this.role === 'HOME' && !this.current) {
@@ -212,7 +215,7 @@
                             <div class="flex justify-between items-center bg-white/5 p-4 rounded-2xl">
                                 <h2 class="text-xl font-black italic uppercase">Gestão</h2>
                                 <div class="flex gap-2">
-                                    <button onclick="app.exportExcel()" class="bg-green-600/20 text-green-500 p-3 rounded-xl"><i data-lucide="download" class="w-5 h-5"></i></button>
+                                    <button onclick="app.exportExcel()" class="bg-green-600/20 text-green-500 p-3 rounded-xl" title="Backup Excel"><i data-lucide="download" class="w-5 h-5"></i></button>
                                     <button onclick="app.editingId=null;app.role='REG';app.render()" class="btn-primary px-5 py-3 rounded-xl text-xs uppercase">+ Novo</button>
                                 </div>
                             </div>
@@ -233,7 +236,7 @@
                                             </div>
                                         </div>
                                         <div class="grid grid-cols-2 gap-2 border-t border-white/5 pt-4">
-                                            <select id="sv-${c.id}" class="bg-black text-[10px] p-3 rounded-xl border border-white/10 uppercase font-bold">
+                                            <select id="sv-${c.id}" class="bg-black text-[10px] p-3 rounded-xl border border-white/10 uppercase font-bold text-white">
                                                 <option value="">Serviço</option>
                                                 <option value="Lavagem Simples">Lavagem Simples</option>
                                                 <option value="Geral Completa">Geral Completa</option>
@@ -241,9 +244,9 @@
                                                 <option value="Lavagem Motor">Lavagem Motor</option>
                                                 <option value="Martelinho">Martelinho</option>
                                             </select>
-                                            <input id="val-${c.id}" type="number" placeholder="Valor R$" class="bg-black text-[10px] p-3 rounded-xl border border-white/10 font-bold">
+                                            <input id="val-${c.id}" type="number" placeholder="Valor R$" class="bg-black text-[10px] p-3 rounded-xl border border-white/10 font-bold text-white">
                                         </div>
-                                        <button onclick="app.lancarServico('${c.id}')" class="w-full bg-green-600 text-white text-[10px] font-black py-4 rounded-xl uppercase tracking-widest">Lançar e Pontuar</button>
+                                        <button onclick="app.lancarServico('${c.id}')" class="w-full bg-green-600 text-white text-[10px] font-black py-4 rounded-xl uppercase tracking-widest active:scale-95 transition-transform">Lançar e Pontuar</button>
                                     </div>
                                 `).join('')}
                             </div>
@@ -253,12 +256,12 @@
                         <div class="max-w-md mx-auto space-y-6">
                             <h2 class="text-2xl font-black uppercase italic">${this.editingId ? 'Editar Cliente' : 'Novo Cadastro'}</h2>
                             <div class="space-y-3">
-                                <input id="reg-name" placeholder="NOME DO CLIENTE" class="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm font-bold uppercase">
-                                <input id="reg-plate" placeholder="PLACA" class="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm font-bold uppercase">
-                                <input id="reg-modelo" placeholder="MODELO DO VEÍCULO" class="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm font-bold uppercase">
+                                <input id="reg-name" placeholder="NOME DO CLIENTE" class="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm font-bold uppercase text-white">
+                                <input id="reg-plate" placeholder="PLACA" class="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm font-bold uppercase text-white">
+                                <input id="reg-modelo" placeholder="MODELO DO VEÍCULO" class="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm font-bold uppercase text-white">
                                 <div class="grid grid-cols-2 gap-3">
                                     <input id="reg-nasc" type="date" class="bg-white/5 border border-white/10 rounded-2xl p-5 text-[10px] font-bold text-gray-500">
-                                    <input id="reg-time" placeholder="TIME" class="bg-white/5 border border-white/10 rounded-2xl p-5 text-sm font-bold uppercase">
+                                    <input id="reg-time" placeholder="TIME" class="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm font-bold uppercase text-white">
                                 </div>
                                 <select id="reg-origem" class="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-xs font-bold text-gray-500">
                                     <option value="">COMO NOS CONHECEU?</option>
@@ -281,7 +284,7 @@
             },
 
             async deleteCliente(id) {
-                if(confirm('Excluir cliente e histórico?')) await deleteDoc(doc(db, "clientes", id));
+                if(confirm('Excluir cliente e todo seu histórico permanentemente?')) await deleteDoc(doc(db, "clientes", id));
             }
         };
 
