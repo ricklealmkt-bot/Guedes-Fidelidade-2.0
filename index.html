@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GUEDES FIDELIDADE 2.0</title>
+    <title>GUEDES FIDELIDADE 2.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -13,10 +13,10 @@
         body { font-family: 'Inter', sans-serif; background-color: #000; color: #fff; -webkit-tap-highlight-color: transparent; }
         .gold-glow { text-shadow: 0 0 25px rgba(254, 203, 10, 0.4); }
         .card-glass { background: rgba(15, 15, 15, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
-        .btn-primary { background-color: #fecb0a; color: #000; font-weight: 900; transition: all 0.2s; }
-        .btn-primary:active { transform: scale(0.95); opacity: 0.9; }
-        input, select { outline: none; }
+        .btn-primary { background-color: #fecb0a; color: #000; font-weight: 900; }
         .dica-ia { border-left: 3px solid #fecb0a; background: rgba(254, 203, 10, 0.05); }
+        .progress-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.1); }
+        .progress-dot.active { background: #fecb0a; box-shadow: 0 0 8px #fecb0a; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col overflow-x-hidden">
@@ -36,7 +36,7 @@
 
     <main id="app-content" class="flex-grow flex flex-col container mx-auto px-4 py-6"></main>
 
-    <footer class="border-t border-gray-900 bg-black py-8 text-center space-y-2">
+    <footer class="border-t border-gray-900 bg-black py-8 text-center space-y-4">
         <p class="text-[9px] font-bold uppercase text-white/60 px-4">Rua Batista Carneiro, 113 - Salgado Filho - BH/MG</p>
         <div id="footer-cta"></div>
     </footer>
@@ -60,6 +60,7 @@
         const app = {
             role: 'HOME',
             current: null,
+            editingId: null,
             clientes: [],
             dicas: [
                 "A lavagem do motor evita o ressecamento de mangueiras e ajuda na valorização na hora da venda.",
@@ -75,159 +76,164 @@
                 });
             },
 
-            async addCliente() {
+            async saveCliente() {
                 const name = document.getElementById('reg-name').value;
                 const plate = document.getElementById('reg-plate').value;
                 if(!name || !plate) return alert('Nome e Placa são obrigatórios');
 
-                const novo = {
+                const dados = {
                     name: name.toUpperCase(),
                     plate: plate.toUpperCase(),
                     modelo: document.getElementById('reg-modelo').value.toUpperCase(),
                     nascimento: document.getElementById('reg-nasc').value,
                     origem: document.getElementById('reg-origem').value,
                     time: document.getElementById('reg-time').value.toUpperCase(),
-                    stamps: 0,
-                    goldCount: 0,
-                    historico: [],
-                    createdAt: new Date().toISOString()
+                    updatedAt: new Date().toISOString()
                 };
 
-                await addDoc(collection(db, "clientes"), novo);
+                if(this.editingId) {
+                    await updateDoc(doc(db, "clientes", this.editingId), dados);
+                    this.editingId = null;
+                } else {
+                    await addDoc(collection(db, "clientes"), {
+                        ...dados,
+                        stamps: 0,
+                        goldCount: 0,
+                        historico: [],
+                        createdAt: new Date().toISOString()
+                    });
+                }
                 this.role = 'ADMIN';
                 this.render();
+            },
+
+            editCliente(c) {
+                this.editingId = c.id;
+                this.role = 'REG';
+                this.render();
+                document.getElementById('reg-name').value = c.name;
+                document.getElementById('reg-plate').value = c.plate;
+                document.getElementById('reg-modelo').value = c.modelo;
+                document.getElementById('reg-nasc').value = c.nascimento;
+                document.getElementById('reg-time').value = c.time;
+                document.getElementById('reg-origem').value = c.origem;
             },
 
             async lancarServico(id) {
                 const servico = document.getElementById(`sv-${id}`).value;
                 const valor = document.getElementById(`val-${id}`).value;
-                
                 if(!servico || !valor) return alert('Selecione o serviço e o valor');
 
                 const docRef = doc(db, "clientes", id);
                 const cliente = this.clientes.find(c => c.id === id);
                 const novosStamps = (cliente.stamps || 0) + 1;
 
-                const registro = {
-                    servico,
-                    valor: parseFloat(valor),
-                    data: new Date().toLocaleString('pt-BR')
-                };
-
-                let updateData = {
-                    historico: arrayUnion(registro),
+                const updateData = {
+                    historico: arrayUnion({ servico, valor: parseFloat(valor), data: new Date().toLocaleString('pt-BR') }),
                     stamps: novosStamps >= 10 ? 0 : novosStamps
                 };
 
                 if(novosStamps >= 10) {
                     updateData.goldCount = (cliente.goldCount || 0) + 1;
                     confetti();
-                    alert('PARABÉNS! Cliente ganhou uma Geral Completa!');
+                    alert('NÍVEL GOLD! Cliente ganhou uma Geral Completa!');
                 }
-
                 await updateDoc(docRef, updateData);
-                alert('Serviço lançado com sucesso!');
             },
 
             exportExcel() {
-                const data = [];
-                this.clientes.forEach(c => {
-                    if(c.historico && c.historico.length > 0) {
-                        c.historico.forEach(h => {
-                            data.push({
-                                Cliente: c.name, Placa: c.plate, Modelo: c.modelo,
-                                Time: c.time, Nascimento: c.nascimento, Origem: c.origem,
-                                Servico: h.servico, Valor: h.valor, Data: h.data
-                            });
-                        });
-                    } else {
-                        data.push({ Cliente: c.name, Placa: c.plate, Modelo: c.modelo, Servico: 'Nenhum', Valor: 0, Data: '-' });
-                    }
-                });
+                const data = this.clientes.flatMap(c => 
+                    c.historico?.length ? c.historico.map(h => ({
+                        Cliente: c.name, Placa: c.plate, Servico: h.servico, Valor: h.valor, Data: h.data
+                    })) : [{ Cliente: c.name, Placa: c.plate, Servico: 'Nenhum', Valor: 0, Data: '-' }]
+                );
                 const ws = XLSX.utils.json_to_sheet(data);
                 const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, "Relatorio_Guedes");
-                XLSX.writeFile(wb, "Guedes_Fidelidade_Backup.xlsx");
+                XLSX.utils.book_append_sheet(wb, ws, "Relatorio");
+                XLSX.writeFile(wb, "Guedes_Fidelidade.xlsx");
             },
 
             adminLogin() {
-                const pass = prompt('Senha do Gestor:');
-                if(pass === 'FideliGuedes26#') { 
-                    this.role = 'ADMIN'; 
-                    this.render(); 
-                } else {
-                    alert('Senha incorreta!');
-                }
+                if(prompt('Senha do Gestor:') === 'FideliGuedes26#') { this.role = 'ADMIN'; this.render(); }
             },
 
             render() {
                 const content = document.getElementById('app-content');
                 const nav = document.getElementById('nav-btn');
                 const footerCta = document.getElementById('footer-cta');
-                const whatsAppUrl = "https://wa.me/55319XXXXXXXX"; // COLOQUE SEU WHATSAPP AQUI
+                const whatsApp = "https://wa.me/55319XXXXXXXX";
 
                 nav.innerHTML = this.role === 'HOME' 
-                    ? `<button onclick="app.adminLogin()" class="text-[10px] font-black uppercase text-gray-700">Acesso Restrito</button>`
+                    ? `<button onclick="app.adminLogin()" class="text-[10px] font-black uppercase text-gray-700 tracking-widest">Acesso Restrito</button>`
                     : `<button onclick="app.role='HOME';app.render()" class="bg-red-900/20 text-red-500 px-3 py-1.5 rounded-lg text-[10px] font-black">SAIR</button>`;
 
-                footerCta.innerHTML = `<a href="${whatsAppUrl}" target="_blank" class="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-green-500/20"><i data-lucide="calendar"></i> Agende seu Serviço</a>`;
+                footerCta.innerHTML = (this.role === 'HOME' || this.current) 
+                    ? `<a href="${whatsApp}" target="_blank" class="inline-flex items-center gap-2 bg-green-600 text-white px-8 py-4 rounded-full text-[11px] font-black uppercase tracking-widest shadow-xl shadow-green-500/20"><i data-lucide="calendar" class="w-4 h-4"></i> Agende seu Serviço</a>` 
+                    : '';
 
                 if(this.role === 'HOME' && !this.current) {
                     content.innerHTML = `
-                        <div class="flex-grow flex flex-col justify-center items-center space-y-8 py-8">
+                        <div class="flex-grow flex flex-col justify-center items-center space-y-10 py-12">
                             <div class="text-center">
-                                <h2 class="text-6xl font-black italic gold-glow leading-none tracking-tighter">GUEDES</h2>
-                                <p class="text-lg font-light tracking-[0.4em] text-gray-500 uppercase">Fidelidade</p>
+                                <h2 class="text-7xl font-black italic gold-glow leading-none tracking-tighter">GUEDES</h2>
+                                <p class="text-xl font-light tracking-[0.4em] text-gray-500 uppercase mt-2">Fidelidade</p>
                             </div>
-                            <div class="w-full max-w-sm text-center space-y-4">
-                                <input id="search-plate" type="text" placeholder="SUA PLACA" class="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-2xl font-black text-center focus:border-yellow-500 transition-all uppercase">
-                                <button onclick="app.checkClient()" class="w-full btn-primary rounded-2xl p-5 text-sm uppercase tracking-widest">Consultar Pontos</button>
+                            <div class="w-full max-w-sm space-y-4">
+                                <input id="search-plate" type="text" placeholder="DIGITE SUA PLACA" class="w-full bg-white/5 border border-white/10 rounded-3xl p-6 text-2xl font-black text-center focus:border-yellow-500 transition-all uppercase tracking-tighter">
+                                <button onclick="app.checkClient()" class="w-full btn-primary rounded-3xl p-6 text-sm uppercase tracking-widest shadow-lg shadow-yellow-500/10">Consultar Pontos</button>
                             </div>
                         </div>`;
                 } else if(this.current) {
                     const c = this.current;
-                    const randomDica = this.dicas[Math.floor(Math.random() * this.dicas.length)];
+                    const incentive = c.stamps === 9 ? "É AGORA! O próximo serviço é por nossa conta! 🎁" : `Faltam apenas ${10 - c.stamps} selos para seu prêmio GOLD! 🏆`;
                     content.innerHTML = `
                         <div class="space-y-6 animate-fadeIn">
                             <button onclick="app.current=null;app.render()" class="text-gray-500 text-[10px] font-bold uppercase flex items-center gap-2"><i data-lucide="arrow-left" class="w-3 h-3"></i> Voltar</button>
-                            <div class="card-glass rounded-3xl p-6 text-center">
-                                <h2 class="text-2xl font-black uppercase italic">${c.name}</h2>
-                                <p class="text-yellow-500 font-bold text-sm tracking-widest">${c.plate}</p>
+                            <div class="card-glass rounded-3xl p-8 text-center space-y-2">
+                                <h2 class="text-3xl font-black uppercase italic">${c.name}</h2>
+                                <p class="text-yellow-500 font-black text-sm tracking-[0.3em] uppercase">${c.plate}</p>
                             </div>
                             <div class="grid grid-cols-5 gap-3">
                                 ${Array(10).fill(0).map((_, i) => `
-                                    <div class="aspect-square rounded-xl border-2 ${i < c.stamps ? 'bg-yellow-500 border-yellow-500 shadow-lg shadow-yellow-500/20' : 'border-white/5 bg-white/5'} flex items-center justify-center">
-                                        <i data-lucide="${i < c.stamps ? 'check' : 'circle'}" class="w-5 h-5 ${i < c.stamps ? 'text-black' : 'text-white/10'}"></i>
+                                    <div class="aspect-square rounded-2xl border-2 ${i < c.stamps ? 'bg-yellow-500 border-yellow-500 shadow-lg shadow-yellow-500/30' : 'border-white/5 bg-white/5'} flex items-center justify-center">
+                                        <i data-lucide="${i < c.stamps ? 'check' : 'circle'}" class="w-6 h-6 ${i < c.stamps ? 'text-black' : 'text-white/5'}"></i>
                                     </div>
                                 `).join('')}
                             </div>
-                            <div class="dica-ia p-4 rounded-xl space-y-2">
-                                <div class="flex items-center gap-2 text-yellow-500"><i data-lucide="sparkles" class="w-4 h-4"></i> <span class="text-[10px] font-black uppercase">Guedes Dicas</span></div>
-                                <p class="text-[11px] text-gray-300 leading-relaxed italic">"${randomDica}"</p>
+                            <p class="text-center text-yellow-500/80 text-[11px] font-black uppercase tracking-wider">${incentive}</p>
+                            <div class="dica-ia p-5 rounded-2xl space-y-2">
+                                <div class="flex items-center gap-2 text-yellow-500"><i data-lucide="sparkles" class="w-4 h-4"></i> <span class="text-[10px] font-black uppercase">Dica do Especialista</span></div>
+                                <p class="text-[12px] text-gray-300 leading-relaxed italic">"${this.dicas[Math.floor(Math.random() * this.dicas.length)]}"</p>
                             </div>
                         </div>`;
                 } else if(this.role === 'ADMIN') {
                     content.innerHTML = `
                         <div class="space-y-6">
-                            <div class="flex justify-between items-center">
+                            <div class="flex justify-between items-center bg-white/5 p-4 rounded-2xl">
                                 <h2 class="text-xl font-black italic uppercase">Gestão</h2>
                                 <div class="flex gap-2">
-                                    <button onclick="app.exportExcel()" class="bg-green-600/20 text-green-500 p-2 rounded-lg" title="Backup Excel"><i data-lucide="download" class="w-4 h-4"></i></button>
-                                    <button onclick="app.role='REG';app.render()" class="btn-primary px-4 py-2 rounded-lg text-xs uppercase">+ Novo</button>
+                                    <button onclick="app.exportExcel()" class="bg-green-600/20 text-green-500 p-3 rounded-xl"><i data-lucide="download" class="w-5 h-5"></i></button>
+                                    <button onclick="app.editingId=null;app.role='REG';app.render()" class="btn-primary px-5 py-3 rounded-xl text-xs uppercase">+ Novo</button>
                                 </div>
                             </div>
                             <div class="space-y-4">
-                                ${this.clientes.map(c => `
-                                    <div class="card-glass rounded-2xl p-4 space-y-3">
-                                        <div class="flex justify-between border-b border-white/5 pb-2">
+                                ${this.clientes.sort((a,b) => b.stamps - a.stamps).map(c => `
+                                    <div class="card-glass rounded-2xl p-5 space-y-4">
+                                        <div class="flex justify-between items-start">
                                             <div>
-                                                <p class="font-black text-xs uppercase">${c.name} <span class="text-yellow-500 ml-2">🏆 ${c.goldCount || 0}</span></p>
-                                                <p class="text-[9px] text-gray-500 font-bold">${c.plate} • ${c.modelo}</p>
+                                                <p class="font-black text-sm uppercase flex items-center gap-2">${c.name} <span class="text-yellow-500 tracking-tighter text-[10px]">🏆 ${c.goldCount || 0}</span></p>
+                                                <p class="text-[10px] text-gray-500 font-bold uppercase">${c.plate} • ${c.modelo}</p>
+                                                <div class="flex gap-1 mt-2">
+                                                    ${Array(10).fill(0).map((_, i) => `<div class="progress-dot ${i < c.stamps ? 'active' : ''}"></div>`).join('')}
+                                                </div>
                                             </div>
-                                            <button onclick="app.deleteCliente('${c.id}')" class="text-red-900"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                            <div class="flex gap-1">
+                                                <button onclick='app.editCliente(${JSON.stringify(c).replace(/'/g, "&apos;")})' class="p-2 text-blue-500 bg-blue-500/10 rounded-lg"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                                                <button onclick="app.deleteCliente('${c.id}')" class="p-2 text-red-500 bg-red-500/10 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                            </div>
                                         </div>
-                                        <div class="grid grid-cols-2 gap-2">
-                                            <select id="sv-${c.id}" class="bg-black text-[10px] p-2 rounded border border-white/10">
+                                        <div class="grid grid-cols-2 gap-2 border-t border-white/5 pt-4">
+                                            <select id="sv-${c.id}" class="bg-black text-[10px] p-3 rounded-xl border border-white/10 uppercase font-bold">
                                                 <option value="">Serviço</option>
                                                 <option value="Lavagem Simples">Lavagem Simples</option>
                                                 <option value="Geral Completa">Geral Completa</option>
@@ -235,34 +241,34 @@
                                                 <option value="Lavagem Motor">Lavagem Motor</option>
                                                 <option value="Martelinho">Martelinho</option>
                                             </select>
-                                            <input id="val-${c.id}" type="number" placeholder="Valor R$" class="bg-black text-[10px] p-2 rounded border border-white/10">
+                                            <input id="val-${c.id}" type="number" placeholder="Valor R$" class="bg-black text-[10px] p-3 rounded-xl border border-white/10 font-bold">
                                         </div>
-                                        <button onclick="app.lancarServico('${c.id}')" class="w-full bg-green-600 text-white text-[10px] font-black py-2 rounded-lg uppercase">Lançar e Pontuar</button>
+                                        <button onclick="app.lancarServico('${c.id}')" class="w-full bg-green-600 text-white text-[10px] font-black py-4 rounded-xl uppercase tracking-widest">Lançar e Pontuar</button>
                                     </div>
                                 `).join('')}
                             </div>
                         </div>`;
                 } else if(this.role === 'REG') {
                     content.innerHTML = `
-                        <div class="max-w-md mx-auto space-y-4 animate-fadeIn">
-                            <h2 class="text-xl font-black uppercase italic">Novo Cadastro</h2>
-                            <div class="space-y-2">
-                                <input id="reg-name" placeholder="NOME DO CLIENTE" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm font-bold uppercase">
-                                <input id="reg-plate" placeholder="PLACA" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm font-bold uppercase">
-                                <input id="reg-modelo" placeholder="MODELO DO VEÍCULO" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm font-bold uppercase">
-                                <div class="grid grid-cols-2 gap-2">
-                                    <input id="reg-nasc" type="date" class="bg-white/5 border border-white/10 rounded-xl p-4 text-[10px] font-bold text-gray-500">
-                                    <input id="reg-time" placeholder="TIME" class="bg-white/5 border border-white/10 rounded-xl p-4 text-sm font-bold uppercase">
+                        <div class="max-w-md mx-auto space-y-6">
+                            <h2 class="text-2xl font-black uppercase italic">${this.editingId ? 'Editar Cliente' : 'Novo Cadastro'}</h2>
+                            <div class="space-y-3">
+                                <input id="reg-name" placeholder="NOME DO CLIENTE" class="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm font-bold uppercase">
+                                <input id="reg-plate" placeholder="PLACA" class="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm font-bold uppercase">
+                                <input id="reg-modelo" placeholder="MODELO DO VEÍCULO" class="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm font-bold uppercase">
+                                <div class="grid grid-cols-2 gap-3">
+                                    <input id="reg-nasc" type="date" class="bg-white/5 border border-white/10 rounded-2xl p-5 text-[10px] font-bold text-gray-500">
+                                    <input id="reg-time" placeholder="TIME" class="bg-white/5 border border-white/10 rounded-2xl p-5 text-sm font-bold uppercase">
                                 </div>
-                                <select id="reg-origem" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-xs font-bold text-gray-500">
+                                <select id="reg-origem" class="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-xs font-bold text-gray-500">
                                     <option value="">COMO NOS CONHECEU?</option>
                                     <option value="Instagram">Instagram</option>
                                     <option value="Indicação">Indicação</option>
                                     <option value="Passou na frente">Passou na frente</option>
                                 </select>
                             </div>
-                            <button onclick="app.addCliente()" class="w-full btn-primary p-4 rounded-xl font-black uppercase text-sm">Finalizar Cadastro</button>
-                            <button onclick="app.role='ADMIN';app.render()" class="w-full text-gray-500 font-bold text-[10px] uppercase">Voltar</button>
+                            <button onclick="app.saveCliente()" class="w-full btn-primary p-6 rounded-2xl font-black uppercase text-sm shadow-xl shadow-yellow-500/10">Confirmar</button>
+                            <button onclick="app.role='ADMIN';app.render()" class="w-full text-gray-500 font-bold text-xs uppercase tracking-widest">Cancelar</button>
                         </div>`;
                 }
                 lucide.createIcons();
@@ -275,7 +281,7 @@
             },
 
             async deleteCliente(id) {
-                if(confirm('Deseja excluir permanentemente este cliente e seu histórico?')) await deleteDoc(doc(db, "clientes", id));
+                if(confirm('Excluir cliente e histórico?')) await deleteDoc(doc(db, "clientes", id));
             }
         };
 
