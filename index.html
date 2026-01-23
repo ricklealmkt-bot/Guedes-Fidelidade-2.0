@@ -8,35 +8,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyCcpjJ9WFwKmSDadxnIC83sn8SI2BfiPxE",
-            authDomain: "guedes-fidelidade.firebaseapp.com",
-            projectId: "guedes-fidelidade",
-            storageBucket: "guedes-fidelidade.firebasestorage.app",
-            messagingSenderId: "342813979449",
-            appId: "1:342813979449:web:aef8f1fdb334a72dc8eee8",
-            measurementId: "G-QRHZCYVNP0"
-        };
-
-        const appFirebase = initializeApp(firebaseConfig);
-        const db = getFirestore(appFirebase);
-        const clientesRef = collection(db, "clientes");
-
-        window.firebaseAPI = { addDoc, clientesRef, onSnapshot, doc, updateDoc, deleteDoc, db, query, orderBy };
-    </script>
-
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #000; color: #fff; -webkit-tap-highlight-color: transparent; }
         .gold-glow { text-shadow: 0 0 25px rgba(254, 203, 10, 0.5); }
         .card-glass { background: rgba(10, 10, 10, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
         .btn-primary { background-color: #fecb0a; color: #000; font-weight: 900; }
         input::placeholder { color: #444; text-align: center; }
-        .progress-dot { width: 7px; height: 7px; border-radius: 50%; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col overflow-x-hidden">
@@ -56,164 +33,181 @@
 
     <main id="app-content" class="flex-grow flex flex-col container mx-auto px-4 py-6"></main>
 
-    <footer class="border-t border-gray-900 bg-black py-10">
-        <div class="container mx-auto px-6 text-center space-y-6">
-            <div class="space-y-2">
-                <p class="text-[10px] font-bold uppercase tracking-widest text-white">Rua Batista Carneiro, 113 - Salgado Filho – BH/MG</p>
-                <p class="text-[8px] opacity-40 uppercase tracking-widest italic">Guedes Lava Jato e Estética Automotiva</p>
-            </div>
-        </div>
+    <footer class="border-t border-gray-900 bg-black py-10 text-center space-y-2">
+        <p class="text-[10px] font-bold uppercase text-white">Rua Batista Carneiro, 113 - Salgado Filho - BH/MG</p>
+        <p class="text-[8px] opacity-40 uppercase italic font-medium">Guedes Lava Jato e Estética Automotiva</p>
     </footer>
 
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // Sua configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCcpjJ9WFwKmSDadxnlC83sn8SI2BfIpXE",
+            authDomain: "guedes-fidelidade.firebaseapp.com",
+            projectId: "guedes-fidelidade",
+            storageBucket: "guedes-fidelidade.firebasestorage.app",
+            messagingSenderId: "3428139794449",
+            appId: "1:342813979449:web:aef8f1fdb334a72dc8eee8",
+            measurementId: "G-QRHZCYVNP0"
+        };
+
+        const appFirebase = initializeApp(firebaseConfig);
+        const db = getFirestore(appFirebase);
+
         const app = {
-            db: [],
             role: 'HOME',
             current: null,
+            clientes: [],
 
-            init() {
-                if (!window.firebaseAPI) {
-                    setTimeout(() => this.init(), 500);
-                    return;
-                }
-                const q = window.firebaseAPI.query(window.firebaseAPI.clientesRef, window.firebaseAPI.orderBy("name", "asc"));
-                window.firebaseAPI.onSnapshot(q, (snapshot) => {
-                    this.db = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            async init() {
+                // Sincronização em tempo real
+                onSnapshot(collection(db, "clientes"), (snapshot) => {
+                    this.clientes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     this.render();
                 });
+            },
+
+            async addCliente() {
+                const name = document.getElementById('reg-name').value;
+                const plate = document.getElementById('reg-plate').value;
+                if(!name || !plate) return alert('Nome e Placa são obrigatórios');
+
+                const novo = {
+                    name: name.toUpperCase(),
+                    plate: plate.toUpperCase(),
+                    modelo: document.getElementById('reg-modelo').value.toUpperCase(),
+                    nascimento: document.getElementById('reg-nasc').value,
+                    origem: document.getElementById('reg-origem').value,
+                    time: document.getElementById('reg-time').value.toUpperCase(),
+                    stamps: 0,
+                    goldCount: 0,
+                    createdAt: new Date()
+                };
+
+                try {
+                    await addDoc(collection(db, "clientes"), novo);
+                    alert('Cliente cadastrado!');
+                    this.role = 'ADMIN';
+                    this.render();
+                } catch (e) { console.error("Erro ao salvar: ", e); }
+            },
+
+            async addStamp(id, currentStamps) {
+                const newStamps = currentStamps + 1;
+                const docRef = doc(db, "clientes", id);
+                if (newStamps >= 10) {
+                    confetti();
+                    await updateDoc(docRef, { stamps: 0, goldCount: (this.clientes.find(c => c.id === id).goldCount || 0) + 1 });
+                } else {
+                    await updateDoc(docRef, { stamps: newStamps });
+                }
+            },
+
+            async deleteCliente(id) {
+                if(confirm('Excluir cliente?')) await deleteDoc(doc(db, "clientes", id));
+            },
+
+            adminLogin() {
+                const pass = prompt('Senha do Gestor:');
+                if(pass === '1020') { this.role = 'ADMIN'; this.render(); }
+            },
+
+            checkClient() {
+                const p = document.getElementById('search-plate').value.toUpperCase();
+                const c = this.clientes.find(x => x.plate === p);
+                if(c) { this.current = c; this.render(); } else { alert('Placa não encontrada'); }
             },
 
             render() {
                 const content = document.getElementById('app-content');
                 const nav = document.getElementById('nav-btn');
                 
-                nav.innerHTML = this.role === 'HOME' ? 
-                    `<button onclick="app.adminLogin()" class="text-[10px] font-black uppercase text-gray-700 hover:text-white transition-colors">Gestor</button>` :
-                    `<button onclick="app.logout()" class="text-[10px] font-black uppercase bg-red-900/20 text-red-500 px-3 py-1.5 rounded-lg">Sair</button>`;
+                nav.innerHTML = this.role === 'HOME' 
+                    ? `<button onclick="app.adminLogin()" class="text-[10px] font-black uppercase text-gray-700">Gestor</button>`
+                    : `<button onclick="app.role='HOME';app.render()" class="bg-red-900/20 text-red-500 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase">Sair</button>`;
 
-                if (this.role === 'HOME') {
+                if(this.role === 'HOME' && !this.current) {
                     content.innerHTML = `
-                        <div class="flex-grow flex flex-col justify-center items-center space-y-10 animate-fadeIn py-8">
+                        <div class="flex-grow flex flex-col justify-center items-center space-y-10 py-8">
                             <div class="text-center">
-                                <h2 class="text-6xl md:text-8xl font-black italic gold-glow leading-none uppercase tracking-tighter">GUEDES</h2>
+                                <h2 class="text-6xl font-black italic gold-glow leading-none tracking-tighter">GUEDES</h2>
                                 <p class="text-lg font-light tracking-[0.4em] text-gray-500 uppercase">Fidelidade</p>
                             </div>
-                            
                             <div class="w-full max-w-sm text-center space-y-4">
                                 <h4 class="text-yellow-500 font-black text-xs uppercase tracking-widest">Premiação Exclusiva</h4>
-                                <p class="text-[11px] text-gray-400 px-4">A cada 10 serviços, você ganha uma <b>Geral Completa</b>. O brilho que seu carro merece!</p>
-                            </div>
-
-                            <div class="w-full max-w-sm card-glass p-8 rounded-[3rem] shadow-2xl space-y-6">
-                                <input id="placa-in" placeholder="SUA PLACA" class="w-full bg-transparent border-b border-gray-900 py-4 text-center text-3xl font-black uppercase outline-none focus:border-[#fecb0a] text-white">
-                                <button onclick="app.check()" class="w-full btn-primary h-16 rounded-2xl text-lg uppercase shadow-lg active:scale-95 transition-all">Ver Meus Selos</button>
-                            </div>
-
-                            <a href="https://wa.me/5531982077291" target="_blank" class="flex items-center gap-2 text-[#25d366] text-[10px] font-black uppercase tracking-widest border border-[#25d366]/20 px-6 py-3 rounded-full bg-[#25d366]/5">
-                                <i data-lucide="message-circle" class="w-4 h-4"></i> Agende seu serviço: (31) 98207-7291
-                            </a>
-                        </div>`;
-                } 
-                else if (this.role === 'CLIENTE') {
-                    content.innerHTML = `
-                        <div class="animate-fadeIn space-y-8 max-w-md mx-auto w-full py-4">
-                            <div class="card-glass p-8 rounded-[3rem] text-center space-y-8 border-t-2 border-[#fecb0a]">
-                                <div>
-                                    <p class="text-yellow-500 font-black text-[10px] uppercase italic mb-4">"${this.getIncentive(this.current.stamps)}"</p>
-                                    <h3 class="text-4xl font-black italic uppercase leading-none mb-1">${this.current.name}</h3>
-                                    <p class="text-[#fecb0a] font-bold tracking-widest text-lg uppercase">${this.current.plate}</p>
-                                    <p class="text-[9px] text-gray-600 font-bold uppercase mt-2">${this.current.modelo || 'Veículo'}</p>
-                                </div>
-                                <div class="grid grid-cols-5 gap-3">
-                                    ${Array.from({length: 10}).map((_, i) => `
-                                        <div class="aspect-square rounded-xl border-2 flex items-center justify-center ${i < this.current.stamps ? 'bg-[#fecb0a] border-white text-black shadow-lg shadow-[#fecb0a]/20' : 'bg-black border-gray-900 text-gray-800'}">
-                                            <i data-lucide="${i === 9 ? 'trophy' : 'star'}" class="w-5 h-5 ${i < this.current.stamps ? 'fill-current' : ''}"></i>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                                <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Faltam ${10 - this.current.stamps} selos para o prêmio GOLD</p>
+                                <p class="text-[11px] text-gray-400 px-4">A cada 10 serviços, você ganha uma <b>Geral Completa</b>.</p>
+                                <input id="search-plate" type="text" placeholder="DIGITE SUA PLACA" class="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-2xl font-black text-center focus:border-yellow-500 outline-none transition-all">
+                                <button onclick="app.checkClient()" class="w-full btn-primary rounded-2xl p-5 text-sm uppercase tracking-widest shadow-xl shadow-yellow-500/10">Ver Meus Selos</button>
                             </div>
                         </div>`;
-                }
-                else if (this.role === 'GESTOR') {
+                } else if(this.current) {
+                    const c = this.current;
                     content.innerHTML = `
-                        <div class="space-y-6 pb-24">
+                        <div class="space-y-6 animate-fadeIn">
+                            <button onclick="app.current=null;app.render()" class="text-gray-500 text-[10px] font-bold uppercase flex items-center gap-2"><i data-lucide="arrow-left" class="w-3 h-3"></i> Voltar</button>
+                            <div class="card-glass rounded-3xl p-6 text-center">
+                                <h2 class="text-2xl font-black uppercase italic">${c.name}</h2>
+                                <p class="text-yellow-500 font-bold text-sm">${c.plate} • ${c.modelo || 'VEÍCULO'}</p>
+                            </div>
+                            <div class="grid grid-cols-5 gap-3">
+                                ${Array(10).fill(0).map((_, i) => `
+                                    <div class="aspect-square rounded-xl border-2 ${i < c.stamps ? 'bg-yellow-500 border-yellow-500 shadow-lg shadow-yellow-500/20' : 'border-white/5 bg-white/5'} flex items-center justify-center">
+                                        <i data-lucide="check" class="w-6 h-6 ${i < c.stamps ? 'text-black' : 'text-white/5'}"></i>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>`;
+                } else if(this.role === 'ADMIN') {
+                    content.innerHTML = `
+                        <div class="space-y-6">
                             <div class="flex justify-between items-center">
-                                <h2 class="text-xl font-black uppercase italic">Gestão Guedes</h2>
-                                <button onclick="app.newClient()" class="bg-[#fecb0a] text-black px-4 py-2 rounded-lg font-black text-[10px] uppercase">+ Novo</button>
+                                <h2 class="text-2xl font-black italic uppercase italic">Gestão Guedes</h2>
+                                <button onclick="app.role='REG';app.render()" class="btn-primary px-4 py-2 rounded-lg text-xs uppercase font-black">+ Novo</button>
                             </div>
-                            <div class="grid gap-4">
-                                ${this.db.map(c => `
-                                    <div class="card-glass p-5 rounded-3xl space-y-4">
-                                        <div class="flex justify-between items-start">
-                                            <div>
-                                                <p class="font-black uppercase text-sm">${c.name} <span class="text-yellow-500 text-[10px] ml-2">🏆 ${c.goldCount || 0}</span></p>
-                                                <p class="text-[#fecb0a] font-bold text-xs uppercase">${c.plate} • ${c.modelo || '-'}</p>
-                                                <div class="flex gap-1 mt-2">
-                                                    ${Array.from({length: 10}).map((_, i) => `<div class="progress-dot ${i < c.stamps ? 'bg-yellow-500' : 'bg-gray-800'}"></div>`).join('')}
-                                                </div>
-                                            </div>
-                                            <div class="flex gap-2">
-                                                <button onclick="app.addStamp('${c.id}', ${c.stamps})" class="bg-green-600/20 text-green-500 p-2 rounded-lg"><i data-lucide="${c.stamps >= 10 ? 'trophy' : 'plus'}" class="w-4 h-4"></i></button>
-                                                <button onclick="app.delClient('${c.id}')" class="bg-red-600/20 text-red-500 p-2 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                                            </div>
+                            <div class="space-y-3">
+                                ${this.clientes.map(c => `
+                                    <div class="card-glass rounded-2xl p-4 flex justify-between items-center">
+                                        <div>
+                                            <p class="font-black text-sm uppercase">${c.name} 🏆 ${c.goldCount || 0}</p>
+                                            <p class="text-[10px] text-yellow-500 font-bold">${c.plate} • ${c.modelo || 'UNO'}</p>
+                                            <p class="text-[9px] text-gray-500 uppercase">${c.time || 'SEM TIME'} • ${c.nascimento || '00/00/00'}</p>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <button onclick="app.addStamp('${c.id}', ${c.stamps})" class="bg-green-500/20 text-green-500 p-2 rounded-lg"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                                            <button onclick="app.deleteCliente('${c.id}')" class="bg-red-500/20 text-red-500 p-2 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                                         </div>
                                     </div>
                                 `).join('')}
                             </div>
                         </div>`;
+                } else if(this.role === 'REG') {
+                    content.innerHTML = `
+                        <div class="max-w-md mx-auto space-y-4">
+                            <h2 class="text-xl font-black uppercase italic">Novo Cliente</h2>
+                            <input id="reg-name" placeholder="NOME COMPLETO" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm font-bold">
+                            <input id="reg-plate" placeholder="PLACA (ABC1234)" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm font-bold">
+                            <input id="reg-modelo" placeholder="MODELO DO CARRO" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm font-bold">
+                            <div class="grid grid-cols-2 gap-2">
+                                <input id="reg-nasc" type="date" class="bg-white/5 border border-white/10 rounded-xl p-4 text-xs font-bold text-gray-400">
+                                <input id="reg-time" placeholder="TIME DO CORAÇÃO" class="bg-white/5 border border-white/10 rounded-xl p-4 text-xs font-bold">
+                            </div>
+                            <select id="reg-origem" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm font-bold text-gray-400">
+                                <option value="">COMO FICOU SABENDO?</option>
+                                <option value="Instagram">Instagram</option>
+                                <option value="Indicação">Indicação</option>
+                                <option value="Passou na frente">Passou na frente</option>
+                            </select>
+                            <button onclick="app.addCliente()" class="w-full btn-primary p-4 rounded-xl font-black uppercase text-sm">Salvar Cliente</button>
+                            <button onclick="app.role='ADMIN';app.render()" class="w-full text-gray-500 font-bold text-xs uppercase">Cancelar</button>
+                        </div>`;
                 }
                 lucide.createIcons();
-            },
-
-            getIncentive(s) {
-                if (s >= 9) return "Falta apenas 1! O brilho máximo está chegando! 🔥";
-                if (s >= 7) return "Reta final! Seu carro vai agradecer! 🏆";
-                if (s >= 5) return "Metade do caminho! Mantenha o cuidado.";
-                if (s >= 3) return "Seu carro está ficando viciado em limpeza! ✨";
-                return "Sua jornada de fidelidade começou! 🚀";
-            },
-
-            check() {
-                const p = document.getElementById('placa-in').value.trim().toUpperCase();
-                const c = this.db.find(x => x.plate === p);
-                if(c) { this.role = 'CLIENTE'; this.current = c; this.render(); }
-                else alert("Placa não encontrada.");
-            },
-
-            adminLogin() { if(prompt("Senha:") === 'FideliGuedes26#') { this.role = 'GESTOR'; this.render(); } },
-            logout() { this.role = 'HOME'; this.current = null; this.render(); },
-
-            async newClient() {
-                const n = prompt("Nome:");
-                const p = prompt("Placa:").toUpperCase();
-                const m = prompt("Modelo:");
-                if(n && p) {
-                    await window.firebaseAPI.addDoc(window.firebaseAPI.clientesRef, {
-                        name: n, plate: p, modelo: m, stamps: 0, goldCount: 0, createdAt: new Date()
-                    });
-                }
-            },
-
-            async addStamp(id, current) {
-                const ref = window.firebaseAPI.doc(window.firebaseAPI.db, "clientes", id);
-                if(current >= 10) {
-                    if(confirm("Zerar selos e somar 1 Prêmio Gold?")) {
-                        const c = this.db.find(x => x.id === id);
-                        await window.firebaseAPI.updateDoc(ref, { stamps: 0, goldCount: (c.goldCount || 0) + 1 });
-                    }
-                } else {
-                    await window.firebaseAPI.updateDoc(ref, { stamps: current + 1 });
-                    if(current + 1 === 10) confetti();
-                }
-            },
-
-            async delClient(id) {
-                if(confirm("Excluir?")) {
-                    await window.firebaseAPI.deleteDoc(window.firebaseAPI.doc(window.firebaseAPI.db, "clientes", id));
-                }
             }
         };
+
+        window.app = app;
         app.init();
     </script>
 </body>
