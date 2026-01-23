@@ -3,17 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GUEDES FIDELIDADE</title>
+    <title>GUEDES FIDELIDADE 2.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #000; color: #fff; -webkit-tap-highlight-color: transparent; }
-        .gold-glow { text-shadow: 0 0 25px rgba(254, 203, 10, 0.5); }
-        .card-glass { background: rgba(10, 10, 10, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
-        .btn-primary { background-color: #fecb0a; color: #000; font-weight: 900; }
-        input::placeholder { color: #444; text-align: center; }
+        .gold-glow { text-shadow: 0 0 25px rgba(254, 203, 10, 0.4); }
+        .card-glass { background: rgba(15, 15, 15, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
+        .btn-primary { background-color: #fecb0a; color: #000; font-weight: 900; transition: all 0.2s; }
+        .btn-primary:active { transform: scale(0.95); opacity: 0.9; }
+        input, select { outline: none; }
+        .dica-ia { border-left: 3px solid #fecb0a; background: rgba(254, 203, 10, 0.05); }
     </style>
 </head>
 <body class="min-h-screen flex flex-col overflow-x-hidden">
@@ -23,8 +26,8 @@
             <div class="flex items-center gap-3">
                 <div class="bg-[#fecb0a] p-2 rounded-xl text-black shadow-lg shadow-[#fecb0a]/20"><i data-lucide="car" class="w-5 h-5"></i></div>
                 <div>
-                    <h1 class="text-xs font-black uppercase tracking-tighter leading-none">Guedes Lava Jato</h1>
-                    <p class="text-[7px] text-gray-500 uppercase tracking-widest font-bold">Estética Automotiva</p>
+                    <h1 class="text-xs font-black uppercase tracking-tighter leading-none text-white">Guedes Lava Jato</h1>
+                    <p class="text-[7px] text-yellow-500 uppercase tracking-widest font-bold">Estética Automotiva</p>
                 </div>
             </div>
             <div id="nav-btn"></div>
@@ -33,24 +36,22 @@
 
     <main id="app-content" class="flex-grow flex flex-col container mx-auto px-4 py-6"></main>
 
-    <footer class="border-t border-gray-900 bg-black py-10 text-center space-y-2">
-        <p class="text-[10px] font-bold uppercase text-white">Rua Batista Carneiro, 113 - Salgado Filho - BH/MG</p>
-        <p class="text-[8px] opacity-40 uppercase italic font-medium">Guedes Lava Jato e Estética Automotiva</p>
+    <footer class="border-t border-gray-900 bg-black py-8 text-center space-y-2">
+        <p class="text-[9px] font-bold uppercase text-white/60 px-4">Rua Batista Carneiro, 113 - Salgado Filho - BH/MG</p>
+        <div id="footer-cta"></div>
     </footer>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, onSnapshot, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // Sua configuração do Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyCcpjJ9WFwKmSDadxnlC83sn8SI2BfIpXE",
             authDomain: "guedes-fidelidade.firebaseapp.com",
             projectId: "guedes-fidelidade",
             storageBucket: "guedes-fidelidade.firebasestorage.app",
             messagingSenderId: "3428139794449",
-            appId: "1:342813979449:web:aef8f1fdb334a72dc8eee8",
-            measurementId: "G-QRHZCYVNP0"
+            appId: "1:342813979449:web:aef8f1fdb334a72dc8eee8"
         };
 
         const appFirebase = initializeApp(firebaseConfig);
@@ -60,9 +61,14 @@
             role: 'HOME',
             current: null,
             clientes: [],
+            dicas: [
+                "A lavagem do motor evita o ressecamento de mangueiras e ajuda na valorização na hora da venda.",
+                "Encerar o carro a cada 3 meses protege a pintura contra raios UV e dejetos de pássaros.",
+                "O Martelinho de Ouro preserva a originalidade do seu veículo sem a necessidade de pintura.",
+                "Limpar os dutos de ar-condicionado previne doenças respiratórias e melhora a eficiência do sistema."
+            ],
 
             async init() {
-                // Sincronização em tempo real
                 onSnapshot(collection(db, "clientes"), (snapshot) => {
                     this.clientes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     this.render();
@@ -83,35 +89,183 @@
                     time: document.getElementById('reg-time').value.toUpperCase(),
                     stamps: 0,
                     goldCount: 0,
-                    createdAt: new Date()
+                    historico: [],
+                    createdAt: new Date().toISOString()
                 };
 
-                try {
-                    await addDoc(collection(db, "clientes"), novo);
-                    alert('Cliente cadastrado!');
-                    this.role = 'ADMIN';
-                    this.render();
-                } catch (e) { console.error("Erro ao salvar: ", e); }
+                await addDoc(collection(db, "clientes"), novo);
+                this.role = 'ADMIN';
+                this.render();
             },
 
-            async addStamp(id, currentStamps) {
-                const newStamps = currentStamps + 1;
+            async lancarServico(id) {
+                const servico = document.getElementById(`sv-${id}`).value;
+                const valor = document.getElementById(`val-${id}`).value;
+                
+                if(!servico || !valor) return alert('Selecione o serviço e o valor');
+
                 const docRef = doc(db, "clientes", id);
-                if (newStamps >= 10) {
+                const cliente = this.clientes.find(c => c.id === id);
+                const novosStamps = (cliente.stamps || 0) + 1;
+
+                const registro = {
+                    servico,
+                    valor: parseFloat(valor),
+                    data: new Date().toLocaleString('pt-BR')
+                };
+
+                let updateData = {
+                    historico: arrayUnion(registro),
+                    stamps: novosStamps >= 10 ? 0 : novosStamps
+                };
+
+                if(novosStamps >= 10) {
+                    updateData.goldCount = (cliente.goldCount || 0) + 1;
                     confetti();
-                    await updateDoc(docRef, { stamps: 0, goldCount: (this.clientes.find(c => c.id === id).goldCount || 0) + 1 });
-                } else {
-                    await updateDoc(docRef, { stamps: newStamps });
+                    alert('PARABÉNS! Cliente ganhou uma Geral Completa!');
                 }
+
+                await updateDoc(docRef, updateData);
+                alert('Serviço lançado com sucesso!');
             },
 
-            async deleteCliente(id) {
-                if(confirm('Excluir cliente?')) await deleteDoc(doc(db, "clientes", id));
+            exportExcel() {
+                const data = [];
+                this.clientes.forEach(c => {
+                    if(c.historico && c.historico.length > 0) {
+                        c.historico.forEach(h => {
+                            data.push({
+                                Cliente: c.name, Placa: c.plate, Modelo: c.modelo,
+                                Time: c.time, Nascimento: c.nascimento, Origem: c.origem,
+                                Servico: h.servico, Valor: h.valor, Data: h.data
+                            });
+                        });
+                    } else {
+                        data.push({ Cliente: c.name, Placa: c.plate, Modelo: c.modelo, Servico: 'Nenhum', Valor: 0, Data: '-' });
+                    }
+                });
+                const ws = XLSX.utils.json_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Relatorio_Guedes");
+                XLSX.writeFile(wb, "Guedes_Fidelidade_Backup.xlsx");
             },
 
             adminLogin() {
                 const pass = prompt('Senha do Gestor:');
-                if(pass === '1020') { this.role = 'ADMIN'; this.render(); }
+                if(pass === 'FideliGuedes26#') { 
+                    this.role = 'ADMIN'; 
+                    this.render(); 
+                } else {
+                    alert('Senha incorreta!');
+                }
+            },
+
+            render() {
+                const content = document.getElementById('app-content');
+                const nav = document.getElementById('nav-btn');
+                const footerCta = document.getElementById('footer-cta');
+                const whatsAppUrl = "https://wa.me/55319XXXXXXXX"; // COLOQUE SEU WHATSAPP AQUI
+
+                nav.innerHTML = this.role === 'HOME' 
+                    ? `<button onclick="app.adminLogin()" class="text-[10px] font-black uppercase text-gray-700">Acesso Restrito</button>`
+                    : `<button onclick="app.role='HOME';app.render()" class="bg-red-900/20 text-red-500 px-3 py-1.5 rounded-lg text-[10px] font-black">SAIR</button>`;
+
+                footerCta.innerHTML = `<a href="${whatsAppUrl}" target="_blank" class="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-green-500/20"><i data-lucide="calendar"></i> Agende seu Serviço</a>`;
+
+                if(this.role === 'HOME' && !this.current) {
+                    content.innerHTML = `
+                        <div class="flex-grow flex flex-col justify-center items-center space-y-8 py-8">
+                            <div class="text-center">
+                                <h2 class="text-6xl font-black italic gold-glow leading-none tracking-tighter">GUEDES</h2>
+                                <p class="text-lg font-light tracking-[0.4em] text-gray-500 uppercase">Fidelidade</p>
+                            </div>
+                            <div class="w-full max-w-sm text-center space-y-4">
+                                <input id="search-plate" type="text" placeholder="SUA PLACA" class="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-2xl font-black text-center focus:border-yellow-500 transition-all uppercase">
+                                <button onclick="app.checkClient()" class="w-full btn-primary rounded-2xl p-5 text-sm uppercase tracking-widest">Consultar Pontos</button>
+                            </div>
+                        </div>`;
+                } else if(this.current) {
+                    const c = this.current;
+                    const randomDica = this.dicas[Math.floor(Math.random() * this.dicas.length)];
+                    content.innerHTML = `
+                        <div class="space-y-6 animate-fadeIn">
+                            <button onclick="app.current=null;app.render()" class="text-gray-500 text-[10px] font-bold uppercase flex items-center gap-2"><i data-lucide="arrow-left" class="w-3 h-3"></i> Voltar</button>
+                            <div class="card-glass rounded-3xl p-6 text-center">
+                                <h2 class="text-2xl font-black uppercase italic">${c.name}</h2>
+                                <p class="text-yellow-500 font-bold text-sm tracking-widest">${c.plate}</p>
+                            </div>
+                            <div class="grid grid-cols-5 gap-3">
+                                ${Array(10).fill(0).map((_, i) => `
+                                    <div class="aspect-square rounded-xl border-2 ${i < c.stamps ? 'bg-yellow-500 border-yellow-500 shadow-lg shadow-yellow-500/20' : 'border-white/5 bg-white/5'} flex items-center justify-center">
+                                        <i data-lucide="${i < c.stamps ? 'check' : 'circle'}" class="w-5 h-5 ${i < c.stamps ? 'text-black' : 'text-white/10'}"></i>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="dica-ia p-4 rounded-xl space-y-2">
+                                <div class="flex items-center gap-2 text-yellow-500"><i data-lucide="sparkles" class="w-4 h-4"></i> <span class="text-[10px] font-black uppercase">Guedes Dicas</span></div>
+                                <p class="text-[11px] text-gray-300 leading-relaxed italic">"${randomDica}"</p>
+                            </div>
+                        </div>`;
+                } else if(this.role === 'ADMIN') {
+                    content.innerHTML = `
+                        <div class="space-y-6">
+                            <div class="flex justify-between items-center">
+                                <h2 class="text-xl font-black italic uppercase">Gestão</h2>
+                                <div class="flex gap-2">
+                                    <button onclick="app.exportExcel()" class="bg-green-600/20 text-green-500 p-2 rounded-lg" title="Backup Excel"><i data-lucide="download" class="w-4 h-4"></i></button>
+                                    <button onclick="app.role='REG';app.render()" class="btn-primary px-4 py-2 rounded-lg text-xs uppercase">+ Novo</button>
+                                </div>
+                            </div>
+                            <div class="space-y-4">
+                                ${this.clientes.map(c => `
+                                    <div class="card-glass rounded-2xl p-4 space-y-3">
+                                        <div class="flex justify-between border-b border-white/5 pb-2">
+                                            <div>
+                                                <p class="font-black text-xs uppercase">${c.name} <span class="text-yellow-500 ml-2">🏆 ${c.goldCount || 0}</span></p>
+                                                <p class="text-[9px] text-gray-500 font-bold">${c.plate} • ${c.modelo}</p>
+                                            </div>
+                                            <button onclick="app.deleteCliente('${c.id}')" class="text-red-900"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <select id="sv-${c.id}" class="bg-black text-[10px] p-2 rounded border border-white/10">
+                                                <option value="">Serviço</option>
+                                                <option value="Lavagem Simples">Lavagem Simples</option>
+                                                <option value="Geral Completa">Geral Completa</option>
+                                                <option value="Polimento">Polimento</option>
+                                                <option value="Lavagem Motor">Lavagem Motor</option>
+                                                <option value="Martelinho">Martelinho</option>
+                                            </select>
+                                            <input id="val-${c.id}" type="number" placeholder="Valor R$" class="bg-black text-[10px] p-2 rounded border border-white/10">
+                                        </div>
+                                        <button onclick="app.lancarServico('${c.id}')" class="w-full bg-green-600 text-white text-[10px] font-black py-2 rounded-lg uppercase">Lançar e Pontuar</button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>`;
+                } else if(this.role === 'REG') {
+                    content.innerHTML = `
+                        <div class="max-w-md mx-auto space-y-4 animate-fadeIn">
+                            <h2 class="text-xl font-black uppercase italic">Novo Cadastro</h2>
+                            <div class="space-y-2">
+                                <input id="reg-name" placeholder="NOME DO CLIENTE" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm font-bold uppercase">
+                                <input id="reg-plate" placeholder="PLACA" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm font-bold uppercase">
+                                <input id="reg-modelo" placeholder="MODELO DO VEÍCULO" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm font-bold uppercase">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input id="reg-nasc" type="date" class="bg-white/5 border border-white/10 rounded-xl p-4 text-[10px] font-bold text-gray-500">
+                                    <input id="reg-time" placeholder="TIME" class="bg-white/5 border border-white/10 rounded-xl p-4 text-sm font-bold uppercase">
+                                </div>
+                                <select id="reg-origem" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-xs font-bold text-gray-500">
+                                    <option value="">COMO NOS CONHECEU?</option>
+                                    <option value="Instagram">Instagram</option>
+                                    <option value="Indicação">Indicação</option>
+                                    <option value="Passou na frente">Passou na frente</option>
+                                </select>
+                            </div>
+                            <button onclick="app.addCliente()" class="w-full btn-primary p-4 rounded-xl font-black uppercase text-sm">Finalizar Cadastro</button>
+                            <button onclick="app.role='ADMIN';app.render()" class="w-full text-gray-500 font-bold text-[10px] uppercase">Voltar</button>
+                        </div>`;
+                }
+                lucide.createIcons();
             },
 
             checkClient() {
@@ -120,90 +274,8 @@
                 if(c) { this.current = c; this.render(); } else { alert('Placa não encontrada'); }
             },
 
-            render() {
-                const content = document.getElementById('app-content');
-                const nav = document.getElementById('nav-btn');
-                
-                nav.innerHTML = this.role === 'HOME' 
-                    ? `<button onclick="app.adminLogin()" class="text-[10px] font-black uppercase text-gray-700">Gestor</button>`
-                    : `<button onclick="app.role='HOME';app.render()" class="bg-red-900/20 text-red-500 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase">Sair</button>`;
-
-                if(this.role === 'HOME' && !this.current) {
-                    content.innerHTML = `
-                        <div class="flex-grow flex flex-col justify-center items-center space-y-10 py-8">
-                            <div class="text-center">
-                                <h2 class="text-6xl font-black italic gold-glow leading-none tracking-tighter">GUEDES</h2>
-                                <p class="text-lg font-light tracking-[0.4em] text-gray-500 uppercase">Fidelidade</p>
-                            </div>
-                            <div class="w-full max-w-sm text-center space-y-4">
-                                <h4 class="text-yellow-500 font-black text-xs uppercase tracking-widest">Premiação Exclusiva</h4>
-                                <p class="text-[11px] text-gray-400 px-4">A cada 10 serviços, você ganha uma <b>Geral Completa</b>.</p>
-                                <input id="search-plate" type="text" placeholder="DIGITE SUA PLACA" class="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-2xl font-black text-center focus:border-yellow-500 outline-none transition-all">
-                                <button onclick="app.checkClient()" class="w-full btn-primary rounded-2xl p-5 text-sm uppercase tracking-widest shadow-xl shadow-yellow-500/10">Ver Meus Selos</button>
-                            </div>
-                        </div>`;
-                } else if(this.current) {
-                    const c = this.current;
-                    content.innerHTML = `
-                        <div class="space-y-6 animate-fadeIn">
-                            <button onclick="app.current=null;app.render()" class="text-gray-500 text-[10px] font-bold uppercase flex items-center gap-2"><i data-lucide="arrow-left" class="w-3 h-3"></i> Voltar</button>
-                            <div class="card-glass rounded-3xl p-6 text-center">
-                                <h2 class="text-2xl font-black uppercase italic">${c.name}</h2>
-                                <p class="text-yellow-500 font-bold text-sm">${c.plate} • ${c.modelo || 'VEÍCULO'}</p>
-                            </div>
-                            <div class="grid grid-cols-5 gap-3">
-                                ${Array(10).fill(0).map((_, i) => `
-                                    <div class="aspect-square rounded-xl border-2 ${i < c.stamps ? 'bg-yellow-500 border-yellow-500 shadow-lg shadow-yellow-500/20' : 'border-white/5 bg-white/5'} flex items-center justify-center">
-                                        <i data-lucide="check" class="w-6 h-6 ${i < c.stamps ? 'text-black' : 'text-white/5'}"></i>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>`;
-                } else if(this.role === 'ADMIN') {
-                    content.innerHTML = `
-                        <div class="space-y-6">
-                            <div class="flex justify-between items-center">
-                                <h2 class="text-2xl font-black italic uppercase italic">Gestão Guedes</h2>
-                                <button onclick="app.role='REG';app.render()" class="btn-primary px-4 py-2 rounded-lg text-xs uppercase font-black">+ Novo</button>
-                            </div>
-                            <div class="space-y-3">
-                                ${this.clientes.map(c => `
-                                    <div class="card-glass rounded-2xl p-4 flex justify-between items-center">
-                                        <div>
-                                            <p class="font-black text-sm uppercase">${c.name} 🏆 ${c.goldCount || 0}</p>
-                                            <p class="text-[10px] text-yellow-500 font-bold">${c.plate} • ${c.modelo || 'UNO'}</p>
-                                            <p class="text-[9px] text-gray-500 uppercase">${c.time || 'SEM TIME'} • ${c.nascimento || '00/00/00'}</p>
-                                        </div>
-                                        <div class="flex gap-2">
-                                            <button onclick="app.addStamp('${c.id}', ${c.stamps})" class="bg-green-500/20 text-green-500 p-2 rounded-lg"><i data-lucide="plus" class="w-4 h-4"></i></button>
-                                            <button onclick="app.deleteCliente('${c.id}')" class="bg-red-500/20 text-red-500 p-2 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>`;
-                } else if(this.role === 'REG') {
-                    content.innerHTML = `
-                        <div class="max-w-md mx-auto space-y-4">
-                            <h2 class="text-xl font-black uppercase italic">Novo Cliente</h2>
-                            <input id="reg-name" placeholder="NOME COMPLETO" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm font-bold">
-                            <input id="reg-plate" placeholder="PLACA (ABC1234)" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm font-bold">
-                            <input id="reg-modelo" placeholder="MODELO DO CARRO" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm font-bold">
-                            <div class="grid grid-cols-2 gap-2">
-                                <input id="reg-nasc" type="date" class="bg-white/5 border border-white/10 rounded-xl p-4 text-xs font-bold text-gray-400">
-                                <input id="reg-time" placeholder="TIME DO CORAÇÃO" class="bg-white/5 border border-white/10 rounded-xl p-4 text-xs font-bold">
-                            </div>
-                            <select id="reg-origem" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm font-bold text-gray-400">
-                                <option value="">COMO FICOU SABENDO?</option>
-                                <option value="Instagram">Instagram</option>
-                                <option value="Indicação">Indicação</option>
-                                <option value="Passou na frente">Passou na frente</option>
-                            </select>
-                            <button onclick="app.addCliente()" class="w-full btn-primary p-4 rounded-xl font-black uppercase text-sm">Salvar Cliente</button>
-                            <button onclick="app.role='ADMIN';app.render()" class="w-full text-gray-500 font-bold text-xs uppercase">Cancelar</button>
-                        </div>`;
-                }
-                lucide.createIcons();
+            async deleteCliente(id) {
+                if(confirm('Deseja excluir permanentemente este cliente e seu histórico?')) await deleteDoc(doc(db, "clientes", id));
             }
         };
 
